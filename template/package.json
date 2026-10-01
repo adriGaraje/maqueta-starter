@@ -1,0 +1,59 @@
+{
+  "name": "starterslug",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Starternombre — maqueta front-end: Storybook + Vite + SCSS ITCSS sobre Bootstrap 4.1.3.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "check:stories": "node scripts/storybook-check.mjs",
+    "check:paginas": "node scripts/paginas-check.mjs",
+    "check:plays": "node scripts/play-errors.mjs",
+    "medir:story": "node scripts/medir-story.mjs",
+    "lint:css": "stylelint \"src/**/*.scss\"",
+    "lint:css:fix": "stylelint \"src/**/*.scss\" --fix",
+    "format": "prettier --write \"{src,scripts,.storybook}/**/*.{js,jsx,mjs,scss,html}\"",
+    "format:check": "prettier --check \"{src,scripts,.storybook}/**/*.{js,jsx,mjs,scss,html}\"",
+    "tokens:diff": "node scripts/figma-tokens-diff.mjs",
+    "figma:ready": "node scripts/figma-ready-scan.mjs",
+    "sitemap:sync": "node scripts/site-map-sync.mjs",
+    "build:entrega": "node scripts/build-entrega.mjs && node scripts/estado-entrega.mjs",
+    "estado:entrega": "node scripts/estado-entrega.mjs",
+    "prestorybook": "npm run build:entrega",
+    "prebuild-storybook": "npm run build:entrega",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:pre": "node scripts/deploy.mjs --pre",
+    "check:entrega": "node scripts/entrega-check.mjs",
+    "check:hooks": "node scripts/hooks-check.mjs",
+    "tasks:mirror": "node scripts/jira-mirror.mjs"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.5.3",
+    "@storybook/addon-designs": "^11.1.4",
+    "@storybook/addon-docs": "^10.5.3",
+    "@storybook/addon-links": "^10.5.3",
+    "@storybook/html-vite": "^10.5.3",
+    "jquery": "3.5.1",
+    "popper.js": "1.14.7",
+    "prettier": "^3.3.3",
+    "remark-gfm": "^4.0.1",
+    "sass": "^1.77.8",
+    "storybook": "^10.5.3",
+    "stylelint": "^16.8.1",
+    "stylelint-config-standard-scss": "^13.1.0",
+    "vite": "^5.4.0",
+    "vite-plugin-html-inject": "^1.1.2"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "4.1.3"
+  }
+}

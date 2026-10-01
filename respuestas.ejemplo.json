@@ -1,0 +1,73 @@
+{
+  "proyecto": {
+    "nombre": "Acme",
+    "slug": "acme",
+    "destino": "/private/tmp/claude-507/starter-prueba",
+    "descripcion": "Maqueta de la nueva web de Acme, entregada como plantillas del CMS.",
+    "cms": "Django",
+    "webEnVivo": "www.acme.example"
+  },
+  "figma": {
+    "fileKey": "https://www.figma.com/design/AbCdEf1234567890/Acme-Handoff?node-id=0-1",
+    "nombreArchivo": "Acme Handoff",
+    "org": "Acme",
+    "token": "figd_ejemplo",
+    "viewports": {
+      "mobile": 390,
+      "desktop": 1440
+    }
+  },
+  "atlassian": {
+    "site": "acme.atlassian.net",
+    "cloudId": "00000000-0000-0000-0000-000000000000",
+    "projectKey": "ACME",
+    "projectName": "Acme Web",
+    "boardId": "1",
+    "email": "ana@acme.example",
+    "token": "token-de-ejemplo",
+    "confluenceSpaceKey": "",
+    "confluenceSpaceName": ""
+  },
+  "github": {
+    "remote": "git@github.com:acme/acme-web.git",
+    "integracion": "develop",
+    "release": "main",
+    "patronRama": "<type>/<KEY>-###-<slug>",
+    "mcp": true,
+    "token": "ghp_ejemplo"
+  },
+  "equipo": [
+    {
+      "nombre": "Ana Pérez",
+      "alias": "ana",
+      "email": "ana@acme.example",
+      "jiraAccountId": "",
+      "github": "ana-acme"
+    }
+  ],
+  "auth": {
+    "activar": true,
+    "firebase": {
+      "apiKey": "AIzaEjemplo",
+      "authDomain": "acme-storybook.firebaseapp.com",
+      "projectId": "acme-storybook",
+      "storageBucket": "acme-storybook.firebasestorage.app",
+      "messagingSenderId": "123456789",
+      "appId": "1:123456789:web:abc123"
+    },
+    "proyectoHosting": "acme-storybook",
+    "sitioEntrega": "storybook-acme",
+    "sitioPre": "storybook-acme-pre",
+    "login": {
+      "brand": "Acme",
+      "subtitle": "Acceso privado",
+      "poweredBy": "",
+      "accent": "#2563eb",
+      "ink": "#111827",
+      "surface": "#f3f4f6"
+    }
+  },
+  "grupos": ["figma", "jira", "entrega", "django", "auth"],
+  "comprobar": true,
+  "saltados": []
+}

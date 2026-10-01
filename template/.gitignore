@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+.vite/
+
+# Los dos globales de la entrega: los genera scripts/build-entrega.mjs antes de
+# cada storybook/build. Versionarlos sería tener dos verdades — el SCSS y una copia
+# suya que envejece — que es justo lo que este script existe para evitar.
+public/entrega/
+storybook-static/
+storybook-local*/
+# `storybook-pro` es la copia de la build de la que se extraen los snippets para
+# el CMS. Se me coló entera en un commit el 23-09: 533 ficheros de 536.
+storybook-pro/
+storybook-static-prod/
+storybook-static-check/
+.sb-todo/
+.sb/
+.starterslug-blank/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Capturas sueltas en la raíz. Los assets del proyecto van en src/assets/ o public/;
+# una imagen aquí es una captura de trabajo y no pinta nada en el repo.
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+
+# Builds de Storybook para auditoría y capturas. `pixel-shot` y `pixel-diff`
+# sirven desde un directorio propio para no pisar el de entrega, y esos
+# directorios NO se versionan.
+.sb*/
+storybook-static-check/
+
+# Swap de vim: se cuelan al hacer `git add -A` con un fichero abierto en el editor.
+*.swp
+*.swo

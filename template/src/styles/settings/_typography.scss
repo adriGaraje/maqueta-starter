@@ -1,0 +1,39 @@
+// =============================================================================
+//  SETTINGS · Typography tokens
+//  Escala tipográfica de los styles de texto de Figma (`Desktop/*`, `Mobile/*`).
+//  FUENTE DE VERDAD de la tipografía de marca.
+//  ---------------------------------------------------------------------------
+//  Valores: size en rem (base 16px) · line-height sin unidad (% de Figma / 100) ·
+//  letter-spacing en em (% de Figma / 100).
+//  El comentario encima de cada entrada es el style de Figma y su size/line-height,
+//  y NO es decorativo: `scripts/figma-tokens-diff.mjs` lo parsea.
+//  Se consume con `@include text-style('h1')` (tools/_mixins.scss).
+// =============================================================================
+
+// Dónde están los .woff2, visto desde el CSS que los pide. Vite lo sobrescribe
+// con `additionalData` (vite.config.js y .storybook/main.js).
+$font-path: 'fonts' !default;
+
+// Familia de marca. El `@font-face` va en generic/_fonts.scss.
+$font-family-brand:
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  'Helvetica Neue',
+  arial,
+  sans-serif;
+
+// Pesos que usa la escala.
+$font-weight-regular: 400;
+$font-weight-bold: 700;
+
+// Escala. Cada entrada: (size, line-height, letter-spacing, weight).
+// Ejemplos: sustitúyelos por los styles de Figma.
+$type-scale: (
+  // Figma Desktop/H1 · 56/110%
+  'h1': (3.5rem, 1.1, -0.02em, $font-weight-regular),
+  // Figma Desktop/Body · 16/140%
+  'body': (1rem, 1.4, 0, $font-weight-regular),
+  // Figma Mobile/H1 · 32/120%
+  'mobile-h1': (2rem, 1.2, -0.02em, $font-weight-regular)
+);

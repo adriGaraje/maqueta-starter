@@ -1,0 +1,16 @@
+// =============================================================================
+//  SETTINGS · Design tokens (capa RAW)
+//  Volcado 1:1 de los *styles* de color del Figma del proyecto, leídos vía MCP
+//  (`get_variable_defs`). Es la FUENTE DE VERDAD de la marca.
+//  ---------------------------------------------------------------------------
+//  Aquí van TODOS los colores y gradientes con nombre de Figma, uno por línea,
+//  con el nombre del style en el comentario `// Figma: <Grupo>/<Nombre>`: el
+//  chequeo de drift (`npm run tokens:diff`, grupo figma) lo parsea.
+//  Los componentes NO leen de aquí: leen los alias de `_colors.scss`.
+//  Ver docs/design-tokens.md.
+// =============================================================================
+
+// Ejemplos: sustitúyelos por los de Figma.
+$color-primary: #0d6efd; // Figma: Primarios/Principal
+$color-neutral-black: #111; // Figma: Neutrales/Negro
+$color-neutral-white: #fff; // Figma: Neutrales/Blanco

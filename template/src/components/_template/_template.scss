@@ -1,0 +1,8 @@
+// Solo lo que Bootstrap no expresa. Regístralo en src/styles/components/_index.scss.
+.component-name {
+  display: block;
+}
+
+.component-name__title {
+  @include text-style('h1');
+}

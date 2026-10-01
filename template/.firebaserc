@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "TODO-firebase-project"
+  },
+  "targets": {
+    "TODO-firebase-project": {
+      "hosting": {
+        "entrega": [
+          "storybook-starterslug"
+        ],
+        "pre": [
+          "storybook-starterslug-pre"
+        ]
+      }
+    }
+  }
+}

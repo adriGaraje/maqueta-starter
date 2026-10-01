@@ -1,0 +1,54 @@
+#!/bin/sh
+# Arregla el SCSS que se va a commitear antes de que lo haga.
+#
+# Existe porque el mismo despiste dejó `lint:css` en rojo TRES veces en una
+# semana: un `//` suelto como separador dentro de un bloque de comentarios, que
+# stylelint cuenta como comentario vacío.
+#
+# OJO CON LO QUE SE DABA POR HECHO: `stylelint --fix` NO arregla ese fallo.
+# `scss/comment-no-empty` no es auto-arreglable, así que un `--fix` a secas
+# —que es lo que se pidió— habría bloqueado el commit sin resolver nada. Por eso
+# el hook borra primero las líneas que son solo `//` y después llama a stylelint.
+# Una línea cuyo contenido entero es `//` no puede ser parte de nada válido, así
+# que borrarla es seguro.
+#
+# Se instala con `core.hooksPath`, que apunta el propio git a esta carpeta
+# —versionada— en vez de a `.git/hooks`, que no lo está. Lo hace el script
+# `prepare` de npm, así que basta con `npm install` en un clon nuevo. Sin husky
+# ni lint-staged: una dependencia menos que mantener por un fichero de 30 líneas.
+#
+# Para saltárselo puntualmente: `git commit --no-verify`.
+
+scss=$(git diff --cached --name-only --diff-filter=ACM -- '*.scss')
+[ -z "$scss" ] && exit 0
+
+# 1 · Fuera los separadores vacíos. En node y no en sed porque el hook tiene que
+#     funcionar igual en Windows, que es donde se trabaja.
+echo "$scss" | node -e "
+const fs = require('fs')
+let d = ''
+process.stdin.on('data', (c) => (d += c)).on('end', () => {
+  for (const f of d.split('\n').map((s) => s.trim()).filter(Boolean)) {
+    const antes = fs.readFileSync(f, 'utf8')
+    const despues = antes.split('\n').filter((l) => l.trim() !== '//').join('\n')
+    if (antes !== despues) {
+      fs.writeFileSync(f, despues)
+      console.log('  · separador vacío quitado en ' + f)
+    }
+  }
+})
+"
+
+# 2 · Y lo que stylelint sí sabe arreglar solo.
+#     Solo lo que se está commiteando, no el repo entero: el hook tiene que ser
+#     rápido o se acaba usando --no-verify por costumbre.
+echo "$scss" | xargs npx stylelint --fix || {
+  echo ""
+  echo "✗ stylelint encontró algo que no puede arreglar solo. Míralo y vuelve a intentarlo."
+  exit 1
+}
+
+# 3 · Lo arreglado entra en el mismo commit; si no, el fichero quedaría bien en
+#     disco y roto en el commit, que es peor que no arreglarlo.
+echo "$scss" | xargs git add
+exit 0

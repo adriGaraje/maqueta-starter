@@ -1,0 +1,20 @@
+// Overrides de Bootstrap (variables SASS). Solo lo que la marca cambia: el resto
+// se hereda. Rejilla y breakpoints: los de Bootstrap salvo que el diseño diga otra
+// cosa, y si la dice, se escribe aquí con su medida.
+
+// Columna del sitio, con nombre, para que los módulos no repitan el número.
+// La leen Bootstrap (`.container`) y el mixin `wrap` de tools/_mixins.scss.
+$container-max: 1320px;
+$container-gutter: 1.875rem;
+
+// Un solo escalón: `.container` fluido con tope en $container-max.
+$container-max-widths: (
+  sm: $container-max,
+);
+
+// Marca
+$primary: $brand-primary;
+$secondary: $brand-ink;
+$font-family-sans-serif: $font-family-brand;
+$yiq-text-dark: $brand-ink;
+$yiq-text-light: $color-neutral-white;

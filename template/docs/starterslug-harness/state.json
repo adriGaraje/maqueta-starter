@@ -1,0 +1,20 @@
+{
+  "_comment": "Memoria entre sesiones del harness starterslug-flow. La escribe el cierre y la lee el hook de SessionStart. No editar a mano salvo para desatascar algo.",
+  "ultimoArranque": null,
+  "ultimoCierre": null,
+  "ultimoFoco": "",
+  "racha": {
+    "dias": 0,
+    "ultimoDiaConEntrega": null,
+    "record": 0
+  },
+  "vistoEnJira": {
+    "issues": {}
+  },
+  "deploy": {},
+  "onboarding": {
+    "_comment": "Quién ha pasado ya por docs/starterslug-harness/onboarding.md. Si tu alias no está, tu primer saludo dispara el onboarding.",
+    "hechoPor": []
+  },
+  "traspasos": []
+}

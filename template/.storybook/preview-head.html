@@ -1,0 +1,31 @@
+<!--
+  Parches de la UI de Storybook (el chrome del visor, no la maqueta): no deben
+  acabar en el CSS global ni en el de ningún snippet.
+-->
+<style>
+  /* Prism marca cada token del código con clases genéricas (`tag`, `string`,
+     `number`…). Si el design system tiene una clase con ese nombre, en Docs le
+     cae a cada token y el código sale desparramado. Se neutraliza la caja de
+     todos los tokens; el color es de Prism y se respeta. */
+  .docblock-source .token,
+  .sbdocs .token {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    white-space: inherit;
+  }
+
+  /* El Reboot de Bootstrap entra en Docs y pisa la fuente de `pre, code`. */
+  .docblock-source pre,
+  .docblock-source pre code,
+  .docblock-source :is(kbd, samp) {
+    font-family:
+      ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+  }
+</style>

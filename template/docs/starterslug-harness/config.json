@@ -1,0 +1,301 @@
+{
+  "version": "0.1.0",
+  "atlassian": {
+    "site": "TODO",
+    "cloudId": "TODO",
+    "mcpServer": "plugin:atlassian:atlassian",
+    "jira": {
+      "projectKey": "TODO",
+      "projectName": "TODO",
+      "boardId": null
+    },
+    "confluence": {
+      "spaceKey": "TODO",
+      "spaceName": "TODO",
+      "indexPageId": "TODO",
+      "maquetacionIaPageId": "TODO",
+      "writeAccess": false
+    }
+  },
+  "figma": {
+    "mcpServer": "plugin:figma:figma",
+    "org": "TODO",
+    "files": {},
+    "primaryFile": null
+  },
+  "repo": {
+    "name": "starterslug",
+    "remote": "TODO",
+    "stack": "Storybook 8 + Vite + HTML + SCSS (ITCSS) + Bootstrap 4.1.3",
+    "handoff": "TODO",
+    "greenGates": [
+      "npm run build",
+      "npm run lint:css",
+      "npm run format:check"
+    ],
+    "tasksMirror": "tasks/backlog.md",
+    "appendOnlyHotspots": [
+      "src/styles/components/_index.scss",
+      "src/scripts/main.js",
+      ".storybook/main.js"
+    ],
+    "pageGate": "npm run check:paginas"
+  },
+  "deploy": {
+    "provider": "Firebase Hosting",
+    "firebaseProject": "TODO",
+    "tool": "npx firebase-tools",
+    "site": "TODO",
+    "url": "TODO",
+    "comandoUnico": "npm run deploy — NO se le dice el destino: scripts/deploy.mjs lee la rama actual y de ahí sale (develop → pre, main → entrega, cualquier otra aborta). Antes de construir exige árbol limpio y rama al día con origin. `npm run deploy:pre` es la escotilla para publicar la rama actual en pre, nunca en pro.",
+    "targets": {
+      "pre": {
+        "hostingTarget": "pre",
+        "site": "TODO",
+        "url": "TODO",
+        "rama": "develop",
+        "public": "storybook-static",
+        "build": "npm run build-storybook",
+        "deploy": "npm run deploy"
+      },
+      "entrega": {
+        "hostingTarget": "entrega",
+        "site": "TODO",
+        "url": "TODO",
+        "rama": "main",
+        "public": "storybook-static",
+        "build": "npm run build-storybook",
+        "deploy": "npm run deploy"
+      }
+    },
+    "sitioRetirado": {
+      "site": "TODO",
+      "url": "TODO"
+    }
+  },
+  "team": [],
+  "models": {
+    "notaEffort": "El effort sale del frontmatter del agente, no de la llamada: este bloque documenta, el frontmatter manda.",
+    "maqueter": {
+      "role": "Maquetación pixel-perfect del componente (HTML + SCSS + Bootstrap + story).",
+      "agentModel": "opus",
+      "label": "Claude Opus 5",
+      "invocacion": "Agent con model: \"opus\", agentType: \"general-purpose\". Sin definición propia: hereda el effort de la sesión.",
+      "agentName": "starterslug-maqueter"
+    },
+    "analyst": {
+      "role": "Extracción de contexto de Figma (spec de maquetación) y verificación visual pixel-perfect (Storybook vs Figma).",
+      "agentModel": "opus",
+      "effort": "xhigh",
+      "label": "Claude Opus 5 · effort xhigh",
+      "invocacion": "Agent con subagent_type: \"starterslug-analyst\". NO se le pasa `model`: lo fija su propia definición.",
+      "agentName": "starterslug-analyst"
+    }
+  },
+  "stateMachine": {
+    "states": [
+      {
+        "canonical": "backlog",
+        "jira": "Por hacer",
+        "jiraStatusId": "11696",
+        "transitionId": "11",
+        "category": "new",
+        "fallbackOf": null
+      },
+      {
+        "canonical": "ready-to-dev",
+        "jira": "Listo para Dev",
+        "jiraStatusId": null,
+        "transitionId": null,
+        "category": "new",
+        "fallbackOf": "Por hacer",
+        "pending": true
+      },
+      {
+        "canonical": "in-progress",
+        "jira": "En curso",
+        "jiraStatusId": "11697",
+        "transitionId": "21",
+        "category": "indeterminate",
+        "fallbackOf": null
+      },
+      {
+        "canonical": "blocked",
+        "jira": "Bloqueado",
+        "jiraStatusId": "11698",
+        "transitionId": "31",
+        "category": "indeterminate",
+        "fallbackOf": null
+      },
+      {
+        "canonical": "in-review",
+        "jira": "En revisión",
+        "jiraStatusId": "11699",
+        "transitionId": "41",
+        "category": "indeterminate",
+        "fallbackOf": null
+      },
+      {
+        "canonical": "pending-fixes",
+        "jira": "Pendiente de revisar",
+        "jiraStatusId": null,
+        "transitionId": null,
+        "category": "indeterminate",
+        "fallbackOf": "En curso",
+        "pending": true
+      },
+      {
+        "canonical": "done",
+        "jira": "Listo",
+        "jiraStatusId": "11700",
+        "transitionId": "51",
+        "category": "done",
+        "fallbackOf": null
+      }
+    ]
+  },
+  "phases": {
+    "list": [
+      {
+        "id": "0",
+        "name": "Gestión y volcado (epics, criterios, estimación, estados)"
+      },
+      {
+        "id": "1",
+        "name": "Setup (repo, init, estándares, documentación visual, CI/CD, staging)"
+      },
+      {
+        "id": "2",
+        "name": "Fundamentos (auditoría UX/UI, tokens, breakpoints, assets, iconografía)"
+      },
+      {
+        "id": "3",
+        "name": "Design System (arquitectura CSS, átomos, moléculas, organismos, globales)",
+        "core": true
+      },
+      {
+        "id": "4",
+        "name": "Lógica (navegación, modales, formularios, UI dinámica, mocking)"
+      },
+      {
+        "id": "5",
+        "name": "Plantillas (home, listados, detalle, funnels, sistema)"
+      },
+      {
+        "id": "6",
+        "name": "QA (responsive, cross-browser, a11y, performance)"
+      },
+      {
+        "id": "7",
+        "name": "Entrega (código, componentes, CMS, framework backend)"
+      },
+      {
+        "id": "8",
+        "name": "Cierre (ceremonias, design reviews, feedback, hand-off, docs, reporting)"
+      }
+    ]
+  },
+  "project": {
+    "displayName": "Starternombre",
+    "liveSiteHost": "TODO"
+  },
+  "harness": {
+    "skillName": "starterslug-flow",
+    "dir": "docs/starterslug-harness",
+    "hooksDir": ".claude/hooks",
+    "tag": "starterslug-flow",
+    "levelSkills": {}
+  },
+  "triggers": {
+    "maxLen": 40,
+    "arranque": "^\\s*(buenos?\\s*d[ií]as|buenas(\\s+tardes)?|hola|gm|a\\s+currar|arranca(mos)?|empezamos|dale\\s+ca[ñn]a|vamos\\s+all[áa])\\b",
+    "turbo": "\\b(a\\s+saco|turbo|sin\\s+preguntar|modo\\s+bestia)\\b",
+    "cierre": "^\\s*(me\\s+voy|cerramos|buenas\\s+noches|hasta\\s+ma[ñn]ana|fin\\s+del\\s+d[ií]a|terminamos)\\b",
+    "flags": "i"
+  },
+  "git": {
+    "integrationBranch": "develop",
+    "releaseBranch": "main",
+    "branchPattern": "<type>/<KEY>-###-<slug>",
+    "commitPattern": "type(scope): summary [<KEY>-###]",
+    "prTitlePattern": "[<KEY>-###] <summary>"
+  },
+  "env": {
+    "prefix": "STARTERSLUG_"
+  },
+  "viewports": {
+    "mobile": 390,
+    "desktop": 1440
+  },
+  "tokens": {
+    "colorsFile": "TODO",
+    "typographyFile": "TODO",
+    "snapshotFile": "TODO",
+    "scssPrefix": "TODO",
+    "classPrefix": "TODO",
+    "storyId": "TODO",
+    "storyTitle": "TODO",
+    "diffCmd": "TODO"
+  },
+  "pageStandard": {
+    "headerModule": "TODO",
+    "headerFn": "TODO",
+    "headerCheckFn": "TODO",
+    "snippetModule": "TODO",
+    "snippetMarkFn": "TODO",
+    "snippetCheckFn": "TODO",
+    "snippetTable": "TODO",
+    "snippetMarkers": {
+      "start": "TODO",
+      "end": "TODO"
+    },
+    "headerSpaceVar": "TODO",
+    "headerSpaceSource": "TODO",
+    "headerDesktopPx": null,
+    "headerMobilePx": null,
+    "sectionsCount": null,
+    "replacedBands": [],
+    "checkScript": "TODO",
+    "exemptionsTable": "TODO",
+    "checkCmd": "TODO",
+    "appliesTo": "TODO"
+  },
+  "storybook": {
+    "devPort": 6006,
+    "buildAllCmd": "STARTERSLUG_STORYBOOK_TODO=1 npx storybook build",
+    "titleLevels": [
+      "Welcome",
+      "Release Notes",
+      "Getting Started",
+      "Design System",
+      "Basics",
+      "Snippets",
+      "Layouts",
+      "Pages",
+      "Landings"
+    ]
+  },
+  "housekeeping": {
+    "staleDays": 2,
+    "reviewDays": 3
+  },
+  "contacts": {
+    "design": [],
+    "client": []
+  },
+  "docs": {
+    "jiraWorkflow": "docs/jira-workflow.md",
+    "gitWorkflow": "docs/git-workflow.md",
+    "designTokens": "docs/design-tokens.md",
+    "storyMap": "docs/story-map.md",
+    "deployFirebase": "docs/deploy-firebase.md",
+    "history": "docs/starterslug-harness/historia-del-harness.md"
+  },
+  "paths": {
+    "componentsIndex": "src/styles/components/_index.scss",
+    "siteMap": "src/stories/placeholders/site-map.js",
+    "entregaDir": "public/entrega",
+    "reportsDir": "docs/starterslug-harness/reports"
+  },
+  "updated": "2026-10-01"
+}

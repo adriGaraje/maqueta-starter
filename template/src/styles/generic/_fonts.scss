@@ -1,0 +1,14 @@
+// =============================================================================
+//  GENERIC · @font-face de la tipografía de marca
+//  Va en `generic/` y no en `settings/`: todo lo anterior al import de Bootstrap
+//  en main.scss tiene que emitir CERO CSS, y un `@font-face` es CSS.
+//  La ruta sale de `$font-path` (ver settings/_typography.scss). Si añades un
+//  peso aquí, añade su fichero a la lista de fuentes de scripts/build-entrega.mjs.
+// =============================================================================
+
+// @font-face {
+//   font-family: 'Brand';
+//   src: url('#{$font-path}/Brand-Regular.woff2') format('woff2');
+//   font-weight: 400;
+//   font-display: swap;
+// }

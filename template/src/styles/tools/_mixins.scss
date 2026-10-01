@@ -1,0 +1,25 @@
+@use 'sass:map';
+@use 'sass:list';
+
+// La columna del sitio sin envoltorio en el marcado: un snippet se pega tal cual
+// en el CMS, así que no depende de un `.container` alrededor. El aire lateral va
+// por fuera (`width`), nunca por dentro (`padding`).
+@mixin wrap {
+  width: calc(100% - #{$container-gutter});
+  max-width: $container-max;
+  margin-inline: auto;
+}
+
+// Aplica un estilo de texto de `$type-scale` (settings/_typography.scss).
+@mixin text-style($name) {
+  $t: map.get($type-scale, $name);
+
+  @if not $t {
+    @error "text-style: '#{$name}' no existe en $type-scale (settings/_typography.scss).";
+  }
+
+  font-size: list.nth($t, 1);
+  line-height: list.nth($t, 2);
+  letter-spacing: list.nth($t, 3);
+  font-weight: list.nth($t, 4);
+}

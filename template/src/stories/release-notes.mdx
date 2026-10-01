@@ -1,0 +1,338 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+{/* Título en inglés como el resto de secciones (Welcome, Getting Started, Design
+    System): es identidad de código, regla 4 del CLAUDE.md. El contenido va en
+    castellano porque lo lee el equipo de Starternombre.
+
+    TODO lo que se pinta aquí sale de `public/entrega/estado.json`, que genera
+    `scripts/estado-entrega.mjs` desde git antes de cada build. No hay ni una lista
+    escrita a mano en este fichero, y es a propósito: es la misma fuente que pinta
+    los iconos de la barra lateral, así que el documento y la barra no pueden
+    decir cosas distintas. */}
+
+<Meta title="Release Notes" />
+
+export const azul = '#0050ff'
+export const tinta = '#00001e'
+export const gris = '#3c3c46'
+export const suave = '#f3f3f5'
+export const linea = '#e3e3e8'
+export const verde = '#00805a'
+export const ambar = '#7d6a00'
+
+export const ESTADO = (() => {
+  try {
+    return JSON.parse(import.meta.env.STORYBOOK_STARTERSLUG_ESTADO)
+  } catch {
+    return null
+  }
+})()
+
+export const piezas = ESTADO?.piezas ?? []
+export const resumen = ESTADO?.resumen ?? {}
+export const nuevas = piezas.filter((p) => p.cambio === 'nuevo')
+export const modificadas = piezas.filter((p) => p.cambio === 'modificado')
+export const enCurso = piezas.filter((p) => p.enCurso)
+
+{/*
+  EL ROTULO «EN CURSO» NO VIAJA A PRO: esa marca es
+  para nosotros —local y pre—, no para quien recibe la entrega.
+
+  Se apaga lo que se PINTA, no el dato: las piezas siguen viajando y siguen siendo
+  las mismas. Por eso aqui desaparecen la pastilla, su fila de la leyenda, la cifra
+  y el bloque del final — si se dejara el bloque con la lista vacia diria «nada en
+  curso», que es justo lo contrario de la verdad.
+
+  El destino lo pone `deploy.mjs` y lo reparte `main.js`. En local va vacio, asi
+  que se ve todo.
+*/}
+export const aPro = import.meta.env.STORYBOOK_STARTERSLUG_DESTINO === 'entrega'
+
+export const fechaLarga = (iso) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+{/* Mismos colores y mismo reparto de peso que `renderLabel` en manager.jsx: sólido
+    lo nuevo, suave lo modificado. La leyenda tiene que parecerse a lo que hay en la
+    barra lateral, o no es una leyenda. */}
+
+export const Marca = ({ tipo }) => {
+  const m = {
+    nuevo: { c: '#fff', f: verde, s: '+' },
+    modificado: { c: azul, f: '#dbe6ff', s: '~' },
+  }[tipo]
+  if (!m) return null
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '18px',
+        height: '18px',
+        borderRadius: '50%',
+        background: m.f,
+        color: m.c,
+        fontSize: '12px',
+        fontWeight: 700,
+        flex: '0 0 auto',
+      }}
+    >
+      {m.s}
+    </span>
+  )
+}
+
+export const Pastilla = () => (
+  <span
+    style={{
+      padding: '2px 7px',
+      borderRadius: '4px',
+      background: '#fbf4d0',
+      color: ambar,
+      fontSize: '10px',
+      fontWeight: 700,
+      letterSpacing: '.06em',
+      whiteSpace: 'nowrap',
+    }}
+  >
+    EN CURSO
+  </span>
+)
+
+export const Cifra = ({ n, que, color }) => (
+  <div
+    style={{
+      flex: '1 1 130px',
+      background: '#fff',
+      border: `1px solid ${linea}`,
+      borderRadius: '12px',
+      padding: '16px 18px',
+    }}
+  >
+    <div style={{ fontSize: '32px', fontWeight: 700, lineHeight: 1.1, color: color || tinta }}>
+      {n}
+    </div>
+    <div style={{ fontSize: '13px', color: gris, marginTop: '2px' }}>{que}</div>
+  </div>
+)
+
+export const Fila = ({ p, conDetalle }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '10px',
+      padding: '11px 0',
+      borderBottom: `1px solid ${linea}`,
+    }}
+  >
+    <Marca tipo={p.cambio} />
+    <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '14px', color: tinta }}>{p.titulo}</span>
+        {p.enCurso && !aPro ? <Pastilla /> : null}
+      </div>
+      {conDetalle && p.detalle?.length ? (
+        <div style={{ fontSize: '12px', color: gris, marginTop: '4px', wordBreak: 'break-word' }}>
+          {p.detalle.slice(0, 4).join(' · ')}
+          {p.detalle.length > 4 ? ` · y ${p.detalle.length - 4} más` : ''}
+        </div>
+      ) : null}
+    </div>
+  </div>
+)
+
+export const Bloque = ({ titulo, que, lista, conDetalle, vacio }) => (
+  <section style={{ marginBottom: '40px' }}>
+    <h2 style={{ fontSize: '22px', margin: '0 0 4px', color: tinta }}>{titulo}</h2>
+    <p style={{ margin: '0 0 14px', fontSize: '14px', color: gris, maxWidth: '70ch' }}>{que}</p>
+    {lista.length ? (
+      <div>
+        {lista.map((p) => (
+          <Fila key={p.titulo} p={p} conDetalle={conDetalle} />
+        ))}
+      </div>
+    ) : (
+      <div
+        style={{
+          padding: '14px 16px',
+          borderRadius: '10px',
+          background: suave,
+          fontSize: '14px',
+          color: gris,
+        }}
+      >
+        {vacio}
+      </div>
+    )}
+  </section>
+)
+
+<div style={{ fontFamily: "'OnAir-Regular','Segoe UI',system-ui,sans-serif", color: tinta, maxWidth: '920px' }}>
+
+<div
+  style={{
+    background: 'linear-gradient(135deg,#0050ff,#00001e)',
+    color: '#fff',
+    borderRadius: '20px',
+    padding: '40px',
+    marginBottom: '28px',
+  }}
+>
+  <div style={{ fontSize: '13px', letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.7 }}>
+    {'Starternombre · Design System'}
+  </div>
+  <h1 style={{ fontSize: '40px', lineHeight: 1.1, margin: '8px 0 12px', color: '#fff' }}>
+    {'Qué hay de nuevo'}
+  </h1>
+  <div style={{ fontSize: '17px', lineHeight: 1.45, color: '#fff', opacity: 0.9, maxWidth: '52ch' }}>
+    {ESTADO?.entregaAnterior
+      ? `Lo que ha cambiado desde la entrega del ${fechaLarga(ESTADO.entregaAnterior.fecha)}, y lo que estamos construyendo para la siguiente.`
+      : 'Lo que ha cambiado desde la entrega anterior, y lo que estamos construyendo para la siguiente.'}
+  </div>
+</div>
+
+{!ESTADO ? (
+  <div
+    style={{
+      padding: '18px 20px',
+      borderRadius: '12px',
+      background: '#ffe9d6',
+      color: '#a4480c',
+      fontSize: '14px',
+    }}
+  >
+    <b>{'No se ha podido calcular el estado de esta entrega.'}</b>
+    {
+      ' Las marcas de la barra lateral y el resumen de arriba no están disponibles en esta build. Esta página no inventa datos: prefiere decir que no sabe.'
+    }
+  </div>
+) : null}
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '36px' }}>
+  <Cifra n={resumen.nuevas ?? 0} que="piezas nuevas" color={verde} />
+  <Cifra n={resumen.modificadas ?? 0} que="modificadas" color={azul} />
+  <Cifra n={resumen.estables ?? 0} que="sin cambios" />
+  {aPro ? null : <Cifra n={resumen.enCurso ?? 0} que="en curso" color={ambar} />}
+</div>
+
+## Cómo leer la barra lateral
+
+<p style={{ fontSize: '14px', color: gris, maxWidth: '70ch', marginTop: 0 }}>
+  {
+    'Cada pieza del menú de la izquierda lleva delante una marca con su situación en esta entrega. Estas son las tres, y no hay más.'
+  }
+</p>
+
+<div style={{ border: `1px solid ${linea}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '36px' }}>
+  {[
+    {
+      marca: <Marca tipo="nuevo" />,
+      que: 'Nueva',
+      det: 'No existía en la entrega anterior. Es la primera vez que la recibes.',
+    },
+    {
+      marca: <Marca tipo="modificado" />,
+      que: 'Modificada',
+      det: 'Ya estaba, y ha cambiado: marcado, estilos o documentación. Si la tenías pegada en el CMS, conviene volver a copiarla.',
+    },
+    // La fila de «En curso» solo aparece donde aparece su pastilla. Explicar una
+    // marca que no se ve sería peor que no explicarla.
+    ...(aPro
+      ? []
+      : [
+          {
+            marca: <Pastilla />,
+            que: 'En curso',
+            det: 'Se está trabajando en ella para la siguiente entrega. Se puede mirar, pero todavía va a cambiar — puede llevar textos de relleno o faltarle el móvil.',
+          },
+        ]),
+  ].map((f, i) => (
+    <div
+      key={f.que}
+      style={{
+        display: 'flex',
+        gap: '14px',
+        alignItems: 'flex-start',
+        padding: '14px 18px',
+        background: i % 2 ? suave : '#fff',
+      }}
+    >
+      <div
+        style={{
+          flex: '0 0 150px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {f.marca}
+        <b style={{ fontSize: '13px' }}>{f.que}</b>
+      </div>
+      <div style={{ fontSize: '14px', color: gris, flex: '1 1 auto' }}>{f.det}</div>
+    </div>
+  ))}
+</div>
+
+<p style={{ fontSize: '13px', color: gris, maxWidth: '70ch' }}>
+  {
+    'Una pieza sin marca es una pieza estable: estaba en la entrega anterior y no se ha tocado. Las marcas se refieren SIEMPRE a la última entrega, así que en la siguiente se ponen a cero.'
+  }
+</p>
+
+<Bloque
+  titulo="Nuevo en esta entrega"
+  que="Piezas que no existían la última vez."
+  lista={nuevas}
+  vacio="Ninguna pieza nueva desde la entrega anterior."
+/>
+
+<Bloque
+  titulo="Modificado"
+  que="Piezas que ya tenías y han cambiado. Debajo de cada una, qué ficheros se han tocado."
+  lista={modificadas}
+  conDetalle
+  vacio="Ninguna pieza modificada desde la entrega anterior."
+/>
+
+{aPro ? null : (
+  <Bloque
+    titulo="En curso para la siguiente entrega"
+    que="Están publicadas para que puedas verlas y opinar, pero no están cerradas: van a cambiar antes de la próxima entrega. No las des por buenas todavía."
+    lista={enCurso}
+    vacio="Nada en curso: todo lo publicado está cerrado."
+  />
+)}
+
+<div
+  style={{
+    borderTop: `1px solid ${linea}`,
+    paddingTop: '18px',
+    fontSize: '12px',
+    color: gris,
+    lineHeight: 1.6,
+  }}
+>
+  {ESTADO ? (
+    <>
+      {'Calculado desde el repositorio, no escrito a mano. Referencia: '}
+      <code>{ESTADO.entregaAnterior?.tag ?? 'sin entrega anterior'}</code>
+      {ESTADO.entregaAnterior ? ` (${ESTADO.entregaAnterior.sha})` : ''}
+      {' · build '}
+      <code>{ESTADO.commit}</code>
+      {' · '}
+      {resumen.total}
+      {' piezas.'}
+      <br />
+      {
+        'Una pieza sale como «modificada» cuando cambia alguno de sus propios ficheros. Si cambia otra que ella compone —el botón que usa el footer, por ejemplo— aquí figura sin cambios aunque se vea distinta.'
+      }
+    </>
+  ) : null}
+</div>
+
+</div>

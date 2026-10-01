@@ -1,0 +1,13 @@
+{
+  "pipelineStates": [
+    "design-ready",
+    "context-extracted",
+    "maqueting",
+    "pixel-check",
+    "in-review",
+    "pending-fixes",
+    "blocked",
+    "done"
+  ],
+  "modules": []
+}

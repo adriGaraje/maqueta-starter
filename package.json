@@ -1,0 +1,19 @@
+{
+  "name": "maqueta-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Asistente web que genera un repo de maquetación con el harness completo de Claude Code.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "starter": "node starter/servidor.mjs",
+    "generar": "node scripts/generar.mjs",
+    "format": "prettier --write \"{starter,scripts}/**/*.{js,mjs,css,html}\" \"*.{json,md}\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"{starter,scripts}/**/*.{js,mjs,css,html}\" \"*.{json,md}\" \"docs/**/*.md\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}

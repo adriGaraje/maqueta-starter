@@ -1,0 +1,5 @@
+// Alias semánticos sobre los tokens RAW. Es lo que leen los componentes y
+// `_bootstrap.scss`: si la marca cambia, se toca aquí y no pieza a pieza.
+$brand-primary: $color-primary;
+$brand-ink: $color-neutral-black;
+$brand-surface: $color-neutral-white;

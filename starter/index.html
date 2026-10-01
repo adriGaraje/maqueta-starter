@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maqueta Starter</title>
+    <link rel="stylesheet" href="/estilos.css" />
+  </head>
+  <body>
+    <a class="saltar-al-contenido" href="#panel">Saltar al contenido</a>
+    <header class="cabecera">
+      <h1 class="cabecera__titulo">Maqueta Starter</h1>
+      <p class="cabecera__sub">
+        Un repo de maquetación nuevo con el harness completo, configurado con tus respuestas.
+      </p>
+    </header>
+
+    <div class="marco">
+      <nav class="pasos" aria-label="Pasos del asistente">
+        <ol id="lista-pasos" class="pasos__lista"></ol>
+      </nav>
+
+      <main id="panel" class="panel" tabindex="-1">
+        <form id="formulario" novalidate autocomplete="off">
+          <h2 id="titulo-paso" class="panel__titulo"></h2>
+          <p id="intro-paso" class="panel__intro"></p>
+          <div id="campos"></div>
+          <p id="error-paso" class="panel__error" role="alert" hidden></p>
+          <div class="acciones">
+            <button type="button" id="btn-atras" class="btn btn--sec">Atrás</button>
+            <span class="acciones__hueco"></span>
+            <button type="button" id="btn-saltar" class="btn btn--sec">Saltar</button>
+            <button type="submit" id="btn-siguiente" class="btn">Siguiente</button>
+          </div>
+        </form>
+        <section id="progreso" class="progreso" hidden aria-live="polite">
+          <h2 class="panel__titulo" id="progreso-titulo">Generando…</h2>
+          <pre id="progreso-lineas" class="progreso__lineas"></pre>
+          <div id="progreso-final"></div>
+        </section>
+      </main>
+    </div>
+
+    <footer class="pie">
+      <button type="button" id="btn-borrar" class="enlace">Empezar de cero</button>
+      <span>El borrador se guarda en este navegador.</span>
+    </footer>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

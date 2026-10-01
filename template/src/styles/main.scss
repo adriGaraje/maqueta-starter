@@ -1,0 +1,14 @@
+// ITCSS: de menor a mayor especificidad. Bootstrap va entre Tools y Generic para
+// que nuestras capas lo pisen. El orden de estos imports importa.
+@import 'bootstrap/scss/functions';
+@import 'settings/tokens';
+@import 'settings/colors';
+@import 'settings/typography';
+@import 'settings/bootstrap';
+@import 'tools/mixins';
+@import 'bootstrap/scss/bootstrap';
+@import 'generic/fonts';
+@import 'generic/generic';
+@import 'elements/elements';
+@import 'components/index';
+@import 'trumps/utilities';

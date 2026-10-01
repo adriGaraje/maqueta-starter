@@ -1,0 +1,6 @@
+node_modules/
+salida/
+.env
+.DS_Store
+*.log
+.idea/

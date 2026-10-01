@@ -1,0 +1,14 @@
+// El anillo de foco solo cuando el foco viene del teclado.
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

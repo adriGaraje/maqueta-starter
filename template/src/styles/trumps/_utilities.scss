@@ -1,0 +1,21 @@
+// Utilidades y overrides: ganan al final.
+
+// Una clase por entrada de la escala tipográfica, generada del propio mapa.
+@each $nombre, $_ in $type-scale {
+  .text-style-#{$nombre} {
+    @include text-style($nombre);
+  }
+}
+
+// Bootstrap 4 la llama `.sr-only`.
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

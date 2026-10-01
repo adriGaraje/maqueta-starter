@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <style>
+      /* Los colores los pone `auth-config.js` al cargar; estos son los de reserva. */
+      :root {
+        --auth-accent: #2563eb;
+        --auth-ink: #111827;
+        --auth-surface: #f3f4f6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--auth-surface);
+        font-family: system-ui, sans-serif;
+        color: var(--auth-ink);
+      }
+      .auth-card {
+        width: min(92vw, 380px);
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+      }
+      .auth-card__brand {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--auth-accent);
+      }
+      .auth-card__subtitle {
+        margin: 4px 0 24px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .auth-card__subtitle:empty {
+        display: none;
+      }
+      .auth-card__label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 14px 0 6px;
+      }
+      .auth-card__input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 15px;
+      }
+      .auth-card__input:focus {
+        outline: 2px solid var(--auth-accent);
+        border-color: var(--auth-accent);
+      }
+      .auth-card__button {
+        width: 100%;
+        margin-top: 22px;
+        padding: 12px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--auth-accent);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .auth-card__button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      .auth-card__error {
+        margin: 14px 0 0;
+        color: #c0392b;
+        font-size: 13px;
+        min-height: 18px;
+      }
+      .auth-card__powered {
+        margin: 18px 0 0;
+        text-align: center;
+        color: #b6bcc7;
+        font-size: 11px;
+      }
+      .auth-card__powered:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="auth-card">
+      <h1 class="auth-card__brand" id="brand">Storybook</h1>
+      <p class="auth-card__subtitle" id="subtitle"></p>
+      <form id="login-form">
+        <label class="auth-card__label" for="email">Email</label>
+        <input class="auth-card__input" id="email" type="email" autocomplete="username" required />
+        <label class="auth-card__label" for="password">Contraseña</label>
+        <input
+          class="auth-card__input"
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+        <button class="auth-card__button" id="submit" type="submit">Entrar</button>
+        <p class="auth-card__error" id="error" role="alert"></p>
+      </form>
+      <p class="auth-card__powered" id="powered"></p>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        onAuthStateChanged,
+        setPersistence,
+        browserLocalPersistence,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'
+      import { firebaseConfig } from '/firebase-config.js'
+      import { authConfig } from '/auth-config.js'
+
+      // Lo visible, desde la config: nombre, subtítulo, pie y colores.
+      document.title = `${authConfig.brand} — Login`
+      document.getElementById('brand').textContent = authConfig.brand
+      document.getElementById('subtitle').textContent = authConfig.subtitle
+      document.getElementById('powered').textContent = authConfig.poweredBy
+      const root = document.documentElement.style
+      root.setProperty('--auth-accent', authConfig.accent)
+      root.setProperty('--auth-ink', authConfig.ink)
+      root.setProperty('--auth-surface', authConfig.surface)
+
+      const auth = getAuth(initializeApp(firebaseConfig))
+
+      // Solo destinos del mismo origen (evita el open redirect).
+      const raw = new URLSearchParams(location.search).get('next') || '/'
+      const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+
+      // Con sesión ya abierta, directo al Storybook.
+      onAuthStateChanged(auth, (user) => {
+        if (user) location.replace(next)
+      })
+
+      const form = document.getElementById('login-form')
+      const errorEl = document.getElementById('error')
+      const submitEl = document.getElementById('submit')
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        errorEl.textContent = ''
+        submitEl.disabled = true
+        try {
+          await setPersistence(auth, browserLocalPersistence)
+          await signInWithEmailAndPassword(
+            auth,
+            document.getElementById('email').value.trim(),
+            document.getElementById('password').value
+          )
+          location.replace(next)
+        } catch (err) {
+          errorEl.textContent = authConfig.errorMessage
+          submitEl.disabled = false
+        }
+      })
+    </script>
+  </body>
+</html>

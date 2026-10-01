@@ -1,0 +1,23 @@
+# Qué NO formatea Prettier, y por qué.
+#
+# El glob de `format` / `format:check` vive en package.json. Este fichero es el
+# cinturón: si alguien amplía ese glob, lo de aquí sigue quedando fuera.
+
+# ── .mdx ─────────────────────────────────────────────────────────────────────
+# `prettier --write` sobre un .mdx LO ROMPE (lección L-025 de docs/starterslug-harness).
+# Por eso el glob de format:check nunca los ha incluido, y por eso están aquí:
+# la exclusión estaba solo en la extensión del glob, que es un sitio donde nadie
+# la ve hasta que la pisa. Los 21 .mdx del repo se revisan a mano.
+*.mdx
+
+# ── Salidas de build ─────────────────────────────────────────────────────────
+# No las alcanza el glob actual, pero formatear un artefacto generado es trabajo
+# tirado y ensucia diffs si el glob se amplía algún día.
+dist/
+storybook-static/
+storybook-static-check/
+
+# ── Reportes del harness ─────────────────────────────────────────────────────
+# HTML autocontenido que se publica tal cual como Artifact. Reformatearlo no
+# aporta nada y mueve cientos de líneas en cada reporte nuevo.
+docs/starterslug-harness/reports/
