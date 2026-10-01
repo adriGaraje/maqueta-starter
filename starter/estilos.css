@@ -11,6 +11,7 @@
   --error: #b42318;
   --aviso-fondo: #fff7e0;
   --aviso-borde: #e9c46a;
+  --aviso-tinta: #8a5a00;
   --radio: 8px;
   color-scheme: light dark;
 }
@@ -27,6 +28,7 @@
     --error: #f2877d;
     --aviso-fondo: #2c2616;
     --aviso-borde: #7d6526;
+    --aviso-tinta: #e9c46a;
   }
 }
 
@@ -167,6 +169,15 @@ pre {
 .panel__error {
   color: var(--error);
 }
+.panel__lema {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--suave);
+}
+.panel__lema--obligatorio {
+  color: var(--error);
+}
 
 .rejilla {
   display: grid;
@@ -235,6 +246,22 @@ pre {
 }
 .campo__error {
   color: var(--error);
+}
+.campo__obligatorio {
+  color: var(--error);
+}
+.campo__opcional {
+  margin-left: 4px;
+  color: var(--suave);
+  font-size: 12px;
+  font-weight: 400;
+}
+.campo__necesario {
+  color: var(--aviso-tinta);
+}
+.campo__error[hidden],
+.campo__necesario[hidden] {
+  display: none;
 }
 .seccion {
   grid-column: span 6;

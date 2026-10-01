@@ -141,8 +141,8 @@ const aSlug = (s) =>
     .replace(/^[0-9-]+/, '')
 const SLUG_OK = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
 const crearRepo = () => S.github.modo === 'crear'
-const hayFirebase = () =>
-  !S.saltados.includes('auth') && Boolean(S.auth.proyectoHosting || S.auth.firebase.projectId)
+const hayFirebaseDatos = () => Boolean(S.auth.proyectoHosting || S.auth.firebase.projectId)
+const hayFirebase = () => !S.saltados.includes('auth') && hayFirebaseDatos()
 const hayClaves = () =>
   !S.saltados.includes('auth') && S.auth.activar && Boolean(S.auth.firebase.apiKey)
 
@@ -160,10 +160,14 @@ async function pideDefecto() {
       document.getElementById('aviso-destino-ruta').textContent =
         (S._destinoTocado && S.proyecto.destino) || defectoDestino
     }
-    if (!S._destinoTocado) {
+    if (!S._destinoTocado && S.proyecto.destino !== defectoDestino) {
       set('proyecto.destino', defectoDestino)
       const i = document.getElementById('f-proyecto.destino')
       if (i) i.value = defectoDestino
+      destinoError = ''
+      marcaError('proyecto.destino', '')
+      if (i) comprobarDestino()
+      revisaErrorPaso()
     }
   } catch {}
 }
@@ -185,16 +189,19 @@ const PASOS = [
     id: 'proyecto',
     titulo: 'Proyecto',
     intro:
-      'Lo único obligatorio es el nombre. El slug sale de él y da nombre a la skill, al agente y a las carpetas.',
+      'El slug sale del nombre y da nombre a la skill, al agente y a las carpetas; la carpeta destino se propone sola.',
+    lema: 'Obligatorio',
     obligatorio: true,
     campos: [
       campo('proyecto.nombre', 'Nombre', { placeholder: 'Acme', requerido: true }),
       campo('proyecto.slug', 'Slug', {
         placeholder: 'acme',
+        requerido: true,
         ayuda: 'kebab-case: minúsculas, números y guiones. Se propone a partir del nombre.',
       }),
       campo('proyecto.destino', 'Carpeta destino', {
         placeholder: '/ruta/absoluta/acme',
+        requerido: true,
         ayuda: 'Ruta absoluta. Por defecto, junto al starter. Tiene que no existir o estar vacía.',
       }),
       campo('proyecto.descripcion', 'Descripción', {
@@ -209,10 +216,18 @@ const PASOS = [
     titulo: 'Figma',
     prueba: 'figma',
     intro: 'El archivo de handoff es la fuente de verdad de color, tipografía y medidas.',
+    lema: 'Opcional, pero sin esto el ritual no mira Figma',
+    pierde:
+      'el ritual no comprobará Ready for dev ni tokens hasta rellenar <code>FIGMA_TOKEN</code> y <code>FIGMA_FILE_KEY</code>.',
+    relleno: () => Boolean(S.figma.fileKey || S.figma.token),
     campos: [
       campo('figma.fileKey', 'fileKey o URL del archivo de handoff', {
         placeholder: 'https://www.figma.com/design/AbCd…/Handoff',
         ayuda: 'Si pegas la URL, se extrae el fileKey.',
+        necesario: () =>
+          S.figma.token &&
+          !S.figma.fileKey &&
+          'Necesario para esto: el token no sirve sin el archivo.',
       }),
       campo('figma.nombreArchivo', 'Nombre del archivo', { placeholder: 'Handoff' }),
       campo('figma.org', 'Equipo u organización en Figma', { placeholder: 'Acme' }),
@@ -220,6 +235,10 @@ const PASOS = [
         tipo: 'password',
         ayuda:
           'Va a .env, nunca a config.json. Scopes: file_content:read, file_dev_resources:read.',
+        necesario: () =>
+          S.figma.fileKey &&
+          !S.figma.token &&
+          'Necesario para esto: sin token no se puede probar ni leer el archivo.',
       }),
       campo('figma.viewports.mobile', 'Ancho móvil (px)', { tipo: 'number', mitad: true }),
       campo('figma.viewports.desktop', 'Ancho escritorio (px)', { tipo: 'number', mitad: true }),
@@ -231,8 +250,18 @@ const PASOS = [
     prueba: 'jira',
     intro:
       'El tablero donde viven las tareas. El cloudId lo da getAccessibleAtlassianResources en Claude Code.',
+    lema: 'Opcional, pero sin esto el ritual no ve el tablero de Jira',
+    pierde:
+      'no habrá espejo del tablero en <code>tasks/</code> ni <code>tasks:mirror</code> hasta rellenar el site, la clave del proyecto y el boardId en <code>config.json</code>.',
+    relleno: () => Boolean(S.atlassian.site || S.atlassian.projectKey || S.atlassian.token),
     campos: [
-      campo('atlassian.site', 'Site', { placeholder: 'acme.atlassian.net' }),
+      campo('atlassian.site', 'Site', {
+        placeholder: 'acme.atlassian.net',
+        necesario: () =>
+          !S.atlassian.site &&
+          (S.atlassian.projectKey || S.atlassian.email || S.atlassian.token) &&
+          'Necesario para esto: sin site no hay tablero ni prueba.',
+      }),
       campo('atlassian.cloudId', 'cloudId', { placeholder: '00000000-0000-…' }),
       campo('atlassian.projectKey', 'Clave del proyecto', { placeholder: 'ACME', mitad: true }),
       campo('atlassian.boardId', 'boardId', { placeholder: '1', mitad: true }),
@@ -240,14 +269,21 @@ const PASOS = [
       campo('atlassian.email', 'Email de Atlassian', {
         mitad: true,
         ayuda: 'Para .env (ATLASSIAN_EMAIL) y la prueba de conexión.',
+        necesario: () =>
+          S.atlassian.token &&
+          !S.atlassian.email &&
+          'Necesario para esto: el API token va con su email.',
       }),
       campo('atlassian.token', 'API token de Atlassian', {
         tipo: 'password',
         mitad: true,
-        ayuda:
-          'id.atlassian.com → Security → API tokens. Opcional: el MCP se autoriza aparte con /mcp.',
+        ayuda: 'id.atlassian.com → Security → API tokens. El MCP se autoriza aparte con /mcp.',
+        necesario: () =>
+          S.atlassian.email &&
+          !S.atlassian.token &&
+          'Necesario para esto: sin API token el email no prueba nada.',
       }),
-      campo('atlassian.confluenceSpaceKey', 'Espacio de Confluence (clave, opcional)', {
+      campo('atlassian.confluenceSpaceKey', 'Espacio de Confluence (clave)', {
         mitad: true,
       }),
       campo('atlassian.confluenceSpaceName', 'Espacio de Confluence (nombre)', { mitad: true }),
@@ -259,6 +295,9 @@ const PASOS = [
     prueba: 'github',
     intro:
       'El repo de GitHub queda como origin; las ramas alimentan el flujo de git del harness y el deploy.',
+    lema: 'Opcional, se puede saltar: sin esto el repo se queda en local',
+    pierde: 'el repo se queda en local, sin <code>origin</code>: créalo a mano y añade el remote.',
+    relleno: () => Boolean(crearRepo() ? S.github.token || S.github.owner : S.github.remote),
     alEntrar: () => {
       if (!S.github.nombre && S.proyecto.slug) S.github.nombre = S.proyecto.slug
     },
@@ -275,6 +314,9 @@ const PASOS = [
         si: crearRepo,
         ayuda:
           'Va a .env, nunca a config.json. Scope «repo» (y «read:org» para listar organizaciones). «Probar conexión» rellena «Dónde».',
+        necesario: () =>
+          !S.github.token &&
+          'Necesario para esto: sin token no se puede crear el repo ni probarlo.',
       }),
       campo('github.owner', 'Dónde', {
         tipo: 'select',
@@ -296,8 +338,9 @@ const PASOS = [
       campo('github.remote', 'URL del remote', {
         placeholder: 'git@github.com:acme/acme-web.git',
         si: () => !crearRepo(),
+        necesario: () => !S.github.remote && 'Necesario para esto: sin URL no hay origin.',
       }),
-      campo('github.token', 'GITHUB_TOKEN (opcional)', {
+      campo('github.token', 'GITHUB_TOKEN', {
         tipo: 'password',
         si: () => !crearRepo(),
         ayuda: 'Para probar un repo privado. Va a .env, nunca a config.json.',
@@ -319,6 +362,10 @@ const PASOS = [
     titulo: 'Tú',
     intro:
       'Quien arranca el proyecto es el usuario por defecto del harness; el hook de arranque te reconoce por tu email de git. Más gente, después, en config.team.',
+    lema: 'Opcional, se puede saltar',
+    pierde:
+      'el hook de arranque no te reconocerá por tu email de git hasta rellenar <code>config.team</code>.',
+    relleno: () => Boolean(S.equipo.alias || S.equipo.email || S.equipo.jiraAccountId),
     campos: [
       campo('equipo.alias', 'Alias', {
         mitad: true,
@@ -345,6 +392,10 @@ const PASOS = [
     prueba: 'firebase',
     intro:
       'Firebase Hosting publica el Storybook por rama: integración → sitio pre, release → sitio de entrega. Firebase Auth pone un login delante. firebase-tools se usa por npx: haz `npx firebase login` una vez en esta máquina.',
+    lema: 'Opcional, pero sin esto no hay deploy ni puerta de acceso',
+    pierde:
+      'sin deploy a Firebase Hosting ni puerta de acceso: los grupos «entrega» y «puerta» quedan fuera.',
+    relleno: hayFirebaseDatos,
     alEntrar: () => {
       const slug = S.proyecto.slug || 'slug'
       if (!S.auth.sitioEntrega) S.auth.sitioEntrega = `storybook-${slug}`
@@ -370,7 +421,18 @@ const PASOS = [
         siCampo: 'auth.activar',
       },
       ...['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'].map(
-        (k) => campo(`auth.firebase.${k}`, k, { mitad: true, siCampo: 'auth.activar' })
+        (k) =>
+          campo(`auth.firebase.${k}`, k, {
+            mitad: true,
+            siCampo: 'auth.activar',
+            necesario:
+              k === 'apiKey'
+                ? () =>
+                    hayFirebaseDatos() &&
+                    !S.auth.firebase.apiKey &&
+                    'Necesario para esto: sin apiKey la puerta de acceso no se monta.'
+                : null,
+          })
       ),
       { seccion: 'Aspecto del login', siCampo: 'auth.activar' },
       campo('auth.login.brand', 'Nombre', {
@@ -398,12 +460,15 @@ const PASOS = [
     titulo: 'Qué llevar',
     intro:
       'La base (Storybook, ITCSS, skill, Ojo, hooks de Claude Code, gates, lecciones) va siempre. El destino del HTML se puede cambiar aquí; el resto, a elegir.',
+    lema: 'Opcional, se puede saltar: va la selección por defecto',
+    pierde: 'va la selección por defecto, con los grupos que permitan Figma y Firebase.',
     pinta: pintaGrupos,
   },
   {
     id: 'resumen',
     titulo: 'Resumen',
     intro: 'Repasa y genera. Lo saltado queda como TODO en el repo.',
+    lema: '',
     pinta: pintaResumen,
     final: true,
   },
@@ -440,45 +505,69 @@ function pintaCampo(c) {
   const ayuda = textoAyuda
     ? `<small id="${id}-ayuda" class="campo__ayuda">${esc(textoAyuda)}</small>`
     : ''
-  const describe = textoAyuda ? ` aria-describedby="${id}-ayuda"` : ''
+  // Ayuda, aviso de «necesario» y error: los tres los lee el lector de pantalla con el campo.
+  const textoNecesario = (c.necesario && c.necesario()) || ''
+  const necesario = c.necesario
+    ? `<small id="${id}-necesario" class="campo__necesario"${textoNecesario ? '' : ' hidden'}>${esc(textoNecesario)}</small>`
+    : ''
+  const ids = [textoAyuda && `${id}-ayuda`, c.necesario && `${id}-necesario`].filter(Boolean)
+  const describe = ids.length ? ` aria-describedby="${ids.join(' ')}"` : ''
+  const marca = c.requerido
+    ? ' <span class="campo__obligatorio" aria-hidden="true">*</span>'
+    : ' <span class="campo__opcional">opcional</span>'
   if (c.tipo === 'radio')
-    return `<fieldset class="campo campo--radio"><legend>${esc(c.label)}</legend>${c.opciones
+    return `<fieldset class="campo campo--radio"><legend>${esc(c.label)}${marca}</legend>${c.opciones
       .map(
         ([x, l]) =>
           `<label><input type="radio" name="${id}" data-ruta="${c.ruta}" value="${esc(x)}" ${val === x ? 'checked' : ''}> ${esc(l)}</label>`
       )
       .join('')}</fieldset>`
   if (c.tipo === 'lista')
-    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}</label>
+    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}${marca}</label>
       <select id="${id}" data-ruta="${c.ruta}"${describe}>
         ${c.opciones.map(([x, l]) => `<option value="${esc(x)}" ${x === val ? 'selected' : ''}>${esc(l)}</option>`).join('')}
       </select>${ayuda}</div>`
   if (c.tipo === 'select') {
     const ops = c.opcionesFn()
     const lista = ops.some((o) => o.login === val) || !val ? ops : [{ login: val }, ...ops]
-    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}</label>
+    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}${marca}</label>
       <select id="${id}" data-ruta="${c.ruta}"${describe}>
         ${lista.length ? '' : `<option value="">${esc(c.vacio)}</option>`}
         ${lista.map((o) => `<option value="${esc(o.login)}" ${o.login === val ? 'selected' : ''}>${esc(o.login)}${o.tipo ? ` (${esc(o.tipo)})` : ''}</option>`).join('')}
-      </select>${ayuda}</div>`
+      </select>${ayuda}${necesario}</div>`
   }
   if (c.tipo === 'checkbox')
     return `<div class="campo campo--check"><label><input type="checkbox" id="${id}" data-ruta="${c.ruta}" ${val ? 'checked' : ''}${describe}> ${esc(c.label)}</label>${ayuda}</div>`
   const ph = c.placeholderFn ? c.placeholderFn() : c.placeholder
   return `<div class="campo${ancho}">
-    <label for="${id}">${esc(c.label)}${c.requerido ? ' <span aria-hidden="true">*</span>' : ''}</label>
+    <label for="${id}">${esc(c.label)}${marca}</label>
     <input id="${id}" data-ruta="${c.ruta}" type="${c.tipo || 'text'}" value="${esc(val)}"
-      ${ph ? `placeholder="${esc(ph)}"` : ''} ${c.requerido ? 'required' : ''}${describe}
+      ${ph ? `placeholder="${esc(ph)}"` : ''} ${c.requerido ? 'required aria-required="true"' : ''}
+      aria-describedby="${[...ids, `${id}-error`].join(' ')}"
       ${c.tipo === 'password' ? 'autocomplete="new-password"' : ''} spellcheck="false">
-    ${ayuda}<small class="campo__error" id="${id}-error" hidden></small></div>`
+    ${ayuda}${necesario}<small class="campo__error" id="${id}-error" hidden></small></div>`
+}
+
+function actualizaNecesarios() {
+  for (const c of PASOS[S._paso].campos ?? []) {
+    const el = c.necesario && document.getElementById(`f-${c.ruta}-necesario`)
+    if (!el) continue
+    const t = c.necesario() || ''
+    el.textContent = t
+    el.hidden = !t
+  }
 }
 
 function pinta() {
   const p = PASOS[S._paso]
   pintaPasos()
   $('#titulo-paso').textContent = `${S._paso + 1}. ${p.titulo}`
+  $('#lema-paso').textContent = p.lema
+  $('#lema-paso').hidden = !p.lema
+  $('#lema-paso').classList.toggle('panel__lema--obligatorio', Boolean(p.obligatorio))
   $('#intro-paso').textContent = p.intro
   $('#error-paso').hidden = true
+  $('#error-paso').textContent = ''
   p.alEntrar?.()
   $('#campos').innerHTML =
     (p.pinta ? p.pinta() : `<div class="rejilla">${p.campos.map(pintaCampo).join('')}</div>`) +
@@ -493,7 +582,32 @@ function pinta() {
 // ── pruebas de conexión (las hace el servidor; nada se guarda en disco) ─────
 
 const NOMBRES = { figma: 'Figma', jira: 'Jira', github: 'GitHub', firebase: 'Firebase' }
+const PASO_DE = { figma: 'figma', jira: 'atlassian', github: 'github', firebase: 'auth' }
+// Lo que lee cada prueba: si cambia, su resultado ya no vale y se borra.
+const RUTAS_PRUEBA = {
+  figma: ['figma.fileKey', 'figma.token'],
+  jira: ['atlassian.site', 'atlassian.email', 'atlassian.token', 'atlassian.projectKey'],
+  github: ['github.modo', 'github.remote', 'github.token', 'github.owner', 'github.nombre'],
+  firebase: [
+    'auth.proyectoHosting',
+    'auth.firebase.projectId',
+    'auth.sitioEntrega',
+    'auth.sitioPre',
+  ],
+}
 const pruebas = {}
+// Turno por servicio: la respuesta de una prueba ya relanzada o invalidada se descarta.
+const turno = {}
+
+function olvidaPrueba(servicio) {
+  turno[servicio] = (turno[servicio] ?? 0) + 1
+  delete pruebas[servicio]
+  refresca(servicio)
+}
+function invalidaPruebas(ruta) {
+  for (const [sv, rutas] of Object.entries(RUTAS_PRUEBA))
+    if (pruebas[sv] && rutas.includes(ruta)) olvidaPrueba(sv)
+}
 
 function datosPrueba(servicio) {
   if (servicio === 'figma') return { fileKey: S.figma.fileKey, token: S.figma.token }
@@ -520,6 +634,8 @@ function pintaResultado(servicio) {
   if (r.cargando)
     return `<p class="prueba__res">… probando ${NOMBRES[servicio]}${servicio === 'firebase' ? ' (npx firebase-tools tarda la primera vez)' : ''}</p>`
   const marca = { ok: '✔', error: '✖', omitido: '–' }[r.estado] ?? '✖'
+  if (r.estado === 'omitido')
+    return `<p class="prueba__res prueba__res--omitido"><strong>– ${NOMBRES[servicio]}</strong> · sin probar: ${esc(r.mensaje)}</p>`
   const crear = (r.faltan ?? [])
     .map(
       (s) =>
@@ -534,21 +650,26 @@ function pintaPrueba(servicio) {
     <div id="res-${servicio}" aria-live="polite">${pintaResultado(servicio)}</div></div>`
 }
 
+// En el resumen, un servicio sin prueba dice «sin probar» en vez de quedar en blanco.
+const sinProbar = '<p class="prueba__res prueba__res--omitido">– sin probar</p>'
 function refresca(servicio) {
   const el = document.getElementById(`res-${servicio}`)
-  if (el) el.innerHTML = pintaResultado(servicio)
+  if (el) el.innerHTML = pintaResultado(servicio) || (el.dataset.resumen ? sinProbar : '')
 }
 
 async function probar(servicio) {
+  const t = (turno[servicio] = (turno[servicio] ?? 0) + 1)
   pruebas[servicio] = { cargando: true }
   refresca(servicio)
   try {
-    pruebas[servicio] = await api(`/api/probar/${servicio}`, {
+    const r = await api(`/api/probar/${servicio}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(datosPrueba(servicio)),
     })
-    const { cuentas, usuario } = pruebas[servicio]
+    if (t !== turno[servicio]) return
+    pruebas[servicio] = r
+    const { cuentas, usuario } = r
     if (servicio === 'github' && usuario) set('equipo.github', usuario)
     if (servicio === 'github' && cuentas?.length) {
       S._cuentasGithub = cuentas
@@ -557,6 +678,7 @@ async function probar(servicio) {
       if (PASOS[S._paso].id === 'github') return pinta()
     }
   } catch (e) {
+    if (t !== turno[servicio]) return
     pruebas[servicio] = {
       estado: 'error',
       mensaje: `sin respuesta del servidor del asistente (${e.message})`,
@@ -588,9 +710,9 @@ document.addEventListener('click', (e) => {
   const c = e.target.closest('[data-crear-sitio]')
   if (c) crearSitio(c.dataset.crearSitio)
   if (e.target.id === 'btn-probar-todo')
-    Object.keys(NOMBRES)
-      .filter((sv) => !S.saltados.includes({ jira: 'atlassian', firebase: 'auth' }[sv] ?? sv))
-      .forEach(probar)
+    for (const sv of Object.keys(NOMBRES))
+      if (fuera(PASO_DE[sv])) olvidaPrueba(sv)
+      else probar(sv)
 })
 
 // Sin hooks (perfil html) el grupo `hooks` no tiene nada que mirar: se desmarca;
@@ -601,29 +723,36 @@ function cambiaHandoff(antes, ahora) {
   guardar()
 }
 
-function pintaGrupos() {
-  const avisos = []
-  if (PERFILES[S.proyecto.handoff]?.sinHooks && S.grupos.includes('hooks'))
-    avisos.push('Con HTML estático no hay hooks: check:hooks viajará, pero se salta con un aviso.')
-  if (!hayFirebase()) {
-    for (const g of ['entrega', 'auth'])
-      if (S.grupos.includes(g)) S.grupos = S.grupos.filter((x) => x !== g)
-    avisos.push(
-      'Sin proyecto de Firebase, «entrega» y «puerta de acceso» quedan desmarcados. Rellénalo en el paso 6 para activarlos.'
-    )
-  } else if (!hayClaves() && S.grupos.includes('auth')) {
-    S.grupos = S.grupos.filter((x) => x !== 'auth')
-    avisos.push('La puerta está desactivada o sin apiKey: «puerta de acceso» se desmarca.')
+// Lo que de verdad viaja: la selección menos lo que no tiene con qué funcionar. No toca
+// S.grupos, así que un grupo quitado vuelve solo en cuanto se rellena lo que le faltaba.
+// Corre al pintar «Qué llevar», al pintar el Resumen y justo antes de Generar.
+function depuraGrupos() {
+  const base = S.saltados.includes('grupos') ? GRUPOS.map(([g]) => g) : S.grupos
+  const motivo = {
+    figma: fuera('figma') && `Figma ${S.saltados.includes('figma') ? 'saltado' : 'sin rellenar'}`,
+    jira:
+      fuera('atlassian') && `Jira ${S.saltados.includes('atlassian') ? 'saltado' : 'sin rellenar'}`,
+    entrega: !hayFirebase() && 'sin proyecto de Firebase',
+    auth: !hayFirebase()
+      ? 'sin proyecto de Firebase'
+      : !S.auth.activar
+        ? 'puerta de acceso desactivada'
+        : !hayClaves() && 'sin claves de Firebase',
+    hooks: PERFILES[S.proyecto.handoff]?.sinHooks && 'el perfil html no tiene hooks',
   }
-  if (S.saltados.includes('figma') && S.grupos.includes('figma'))
-    avisos.push('Saltaste Figma: el grupo viaja, pero FIGMA_TOKEN y el archivo quedan en TODO.')
-  if (S.saltados.includes('atlassian') && S.grupos.includes('jira'))
-    avisos.push('Saltaste Jira: el grupo viaja, pero el tablero queda en TODO.')
-  guardar()
-  const bloqueado = (g) => (g === 'entrega' && !hayFirebase()) || (g === 'auth' && !hayClaves())
+  return {
+    grupos: base.filter((g) => !motivo[g]),
+    quitados: base.filter((g) => motivo[g]).map((g) => [g, motivo[g]]),
+    bloqueado: (g) => Boolean(motivo[g]),
+  }
+}
+
+function pintaGrupos() {
+  const { grupos, quitados, bloqueado } = depuraGrupos()
+  const avisos = quitados.map(([g, m]) => `${g} quitado: ${m}.`)
   return `<div class="rejilla">${pintaCampo(CAMPO_HANDOFF)}</div><div class="grupos">${GRUPOS.map(
     ([g, l, d]) => `<label class="grupo ${bloqueado(g) ? 'grupo--off' : ''}">
-      <input type="checkbox" data-grupo="${g}" ${S.grupos.includes(g) ? 'checked' : ''} ${bloqueado(g) ? 'disabled' : ''}>
+      <input type="checkbox" data-grupo="${g}" ${grupos.includes(g) ? 'checked' : ''} ${bloqueado(g) ? 'disabled' : ''}>
       <span><strong>${l}</strong> <code>${g}</code><br><small>${d}</small></span></label>`
   ).join('')}</div>
   ${avisos.map((a) => `<p class="aviso">${esc(a)}</p>`).join('')}
@@ -631,24 +760,43 @@ function pintaGrupos() {
     Al acabar, <code>npm install</code> + <code>build-storybook</code> + <code>check:stories</code> (unos minutos)</label></div>`
 }
 
+// Saltado a mano, o pasado con «Siguiente» sin rellenar nada: en los dos casos se pierde lo mismo.
+function fuera(paso) {
+  const p = PASOS.find((x) => x.id === paso)
+  return S.saltados.includes(paso) || Boolean(p.relleno && !p.relleno())
+}
 function filasResumen(paso) {
   const p = PASOS.find((x) => x.id === paso)
-  if (S.saltados.includes(paso))
-    return `<tr><th>${esc(p.titulo)}</th><td class="saltado" colspan="2">saltado → TODO</td></tr>`
-  if (paso === 'grupos')
-    return `<tr><th>Grupos</th><td colspan="2">base${S.grupos.map((g) => `, ${g}`).join('')}${S.comprobar ? ' · con comprobación' : ''}</td></tr>`
+  const saltado = S.saltados.includes(paso)
+  if (paso === 'grupos') {
+    const { grupos, quitados } = depuraGrupos()
+    const porque = quitados.map(
+      ([g, m]) => `<br><span class="saltado">${g} quitado: ${esc(m)}</span>`
+    )
+    return `<tr><th>${saltado ? '–' : '✔'} ${esc(p.titulo)}</th><td colspan="2">base${grupos.map((g) => `, ${g}`).join('')}${S.comprobar ? ' · con comprobación' : ''}${saltado ? ' <span class="saltado">(saltado: selección por defecto)</span>' : ''}${porque.join('')}</td></tr>`
+  }
+  if (fuera(paso))
+    return `<tr><th class="saltado">– ${esc(p.titulo)}</th><td class="saltado" colspan="2">${esc(p.titulo)} ${saltado ? 'saltado' : 'sin rellenar'}: ${p.pierde}</td></tr>`
+  const cabecera = `<th>✔ ${esc(p.titulo)}</th>`
   const filas = p.campos.filter((c) => c.ruta && visible(c))
-  return filas
-    .map((c, i) => {
-      let v = get(c.ruta)
-      if (c.tipo === 'password') v = v ? '••••••' : ''
-      if (c.tipo === 'checkbox') v = v ? 'sí' : 'no'
-      if (c.tipo === 'radio' || c.tipo === 'lista') v = c.opciones.find(([x]) => x === v)?.[1] ?? v
-      const vacio = v === '' || v == null
-      return `<tr>${i === 0 ? `<th rowspan="${filas.length}">${esc(p.titulo)}</th>` : ''}
+  const prueba = p.prueba
+    ? `<tr><td>Última prueba</td><td><div id="res-${p.prueba}" data-resumen="1" aria-live="polite">${pintaResultado(p.prueba) || sinProbar}</div></td></tr>`
+    : ''
+  const total = filas.length + (prueba ? 1 : 0)
+  return (
+    filas
+      .map((c, i) => {
+        let v = get(c.ruta)
+        if (c.tipo === 'password') v = v ? '••••••' : ''
+        if (c.tipo === 'checkbox') v = v ? 'sí' : 'no'
+        if (c.tipo === 'radio' || c.tipo === 'lista')
+          v = c.opciones.find(([x]) => x === v)?.[1] ?? v
+        const vacio = v === '' || v == null
+        return `<tr>${i === 0 ? cabecera.replace('<th>', `<th rowspan="${total}">`) : ''}
         <td>${esc(c.label)}</td><td class="${vacio ? 'saltado' : ''}">${vacio ? 'TODO' : esc(v)}</td></tr>`
-    })
-    .join('')
+      })
+      .join('') + prueba
+  )
 }
 
 function pintaResumen() {
@@ -657,9 +805,7 @@ function pintaResumen() {
     .join('')}</table></div>
     <p>Se generará en <code>${esc(S.proyecto.destino || defectoDestino)}</code>.</p>
     <div class="prueba"><button type="button" class="btn btn--sec" id="btn-probar-todo">Probar todo</button>
-    ${Object.keys(NOMBRES)
-      .map((sv) => `<div id="res-${sv}" aria-live="polite">${pintaResultado(sv)}</div>`)
-      .join('')}</div>`
+    <small class="campo__ayuda">Prueba las conexiones de los pasos rellenados; el resultado sale en su fila.</small></div>`
 }
 
 // ── validación ───────────────────────────────────────────────────────────────
@@ -673,45 +819,62 @@ function marcaError(ruta, msg) {
   i?.setAttribute('aria-invalid', msg ? 'true' : 'false')
 }
 
-let destinoOk = true
+// Lo que dijo el servidor de la carpeta destino; '' si vale o aún no se sabe.
+let destinoError = ''
 async function comprobarDestino() {
   const ruta = S.proyecto.destino
-  if (!ruta) return marcaError('proyecto.destino', '')
-  if (!ruta.startsWith('/') && !/^[A-Za-z]:\\/.test(ruta)) {
-    destinoOk = false
-    return marcaError('proyecto.destino', 'Tiene que ser una ruta absoluta.')
-  }
-  try {
-    const r = await api(`/api/comprobar-destino?ruta=${encodeURIComponent(ruta)}`)
-    destinoOk = r.vacia
-    marcaError(
-      'proyecto.destino',
-      r.vacia ? '' : r.fichero ? 'Es un fichero, no una carpeta.' : 'Existe y no está vacía.'
-    )
-  } catch {
-    destinoOk = true
-  }
+  let error = ''
+  if (ruta && !ruta.startsWith('/') && !/^[A-Za-z]:\\/.test(ruta))
+    error = 'Tiene que ser una ruta absoluta.'
+  else if (ruta)
+    try {
+      const r = await api(`/api/comprobar-destino?ruta=${encodeURIComponent(ruta)}`)
+      error = r.vacia
+        ? ''
+        : r.fichero
+          ? 'Es un fichero, no una carpeta.'
+          : 'Existe y no está vacía.'
+    } catch {}
+  // Si el campo cambió mientras se preguntaba, esta respuesta ya no es suya.
+  if (ruta !== S.proyecto.destino) return
+  destinoError = error
+  marcaError('proyecto.destino', error)
+  revisaErrorPaso()
+}
+
+const OBLIGATORIOS = ['proyecto.nombre', 'proyecto.slug', 'proyecto.destino']
+function invalidos() {
+  const { nombre, slug, destino } = S.proyecto
+  const mal = {}
+  if (!nombre.trim()) mal['proyecto.nombre'] = 'El nombre es obligatorio.'
+  if (!slug) mal['proyecto.slug'] = 'El slug es obligatorio.'
+  else if (!SLUG_OK.test(slug))
+    mal['proyecto.slug'] = 'kebab-case y empezando por letra, p. ej. «acme-web».'
+  if (!destino.trim()) mal['proyecto.destino'] = 'La carpeta destino es obligatoria.'
+  else if (destinoError) mal['proyecto.destino'] = destinoError
+  return mal
+}
+
+function pintaErrorPaso(mal) {
+  const e = $('#error-paso')
+  const nombres = Object.keys(mal).map((r) => PASOS[0].campos.find((c) => c.ruta === r).label)
+  e.textContent = nombres.length ? `Faltan o no valen: ${nombres.join(', ')}.` : ''
+  e.hidden = !nombres.length
+}
+// El error general solo se enseña al intentar avanzar; después se recomprueba en cada
+// cambio y desaparece en cuanto no queda ningún campo inválido.
+function revisaErrorPaso() {
+  if (PASOS[S._paso].id === 'proyecto' && !$('#error-paso').hidden) pintaErrorPaso(invalidos())
 }
 
 function valida() {
-  const p = PASOS[S._paso]
-  if (p.id !== 'proyecto') return true
-  let bien = true
-  if (!S.proyecto.nombre.trim()) {
-    marcaError('proyecto.nombre', 'El nombre es obligatorio.')
-    bien = false
-  } else marcaError('proyecto.nombre', '')
-  if (!SLUG_OK.test(S.proyecto.slug)) {
-    marcaError('proyecto.slug', 'kebab-case y empezando por letra, p. ej. «acme-web».')
-    bien = false
-  } else marcaError('proyecto.slug', '')
-  if (!destinoOk) bien = false
-  if (!bien) {
-    $('#error-paso').textContent = 'Revisa los campos marcados.'
-    $('#error-paso').hidden = false
-    document.querySelector('[aria-invalid="true"]')?.focus()
-  }
-  return bien
+  if (PASOS[S._paso].id !== 'proyecto') return true
+  const mal = invalidos()
+  for (const r of OBLIGATORIOS) marcaError(r, mal[r] ?? '')
+  pintaErrorPaso(mal)
+  const primero = Object.keys(mal)[0]
+  if (primero) document.getElementById(`f-${primero}`)?.focus()
+  return !primero
 }
 
 // ── navegación ───────────────────────────────────────────────────────────────
@@ -757,16 +920,22 @@ $('#campos').addEventListener('input', (e) => {
   const ruta = t.dataset.ruta
   if (t.type === 'checkbox' || t.type === 'radio' || t.tagName === 'SELECT') return
   set(ruta, t.type === 'number' ? Number(t.value) || '' : t.value)
+  marcaError(ruta, '')
   if (ruta === 'proyecto.nombre' && !S._slugTocado) {
     set('proyecto.slug', aSlug(t.value))
     document.getElementById('f-proyecto.slug').value = S.proyecto.slug
+    marcaError('proyecto.slug', '')
     pideDefecto()
   }
   if (ruta === 'proyecto.slug') {
     S._slugTocado = true
     pideDefecto()
   }
-  if (ruta === 'proyecto.destino') S._destinoTocado = true
+  if (ruta === 'proyecto.destino') {
+    S._destinoTocado = true
+    destinoError = ''
+  }
+  if (ruta === 'equipo.jiraAccountId') document.getElementById('res-cuenta')?.replaceChildren()
   if (ruta === 'figma.fileKey') {
     const m = t.value.match(/figma\.com\/(?:design|file|proto)\/([A-Za-z0-9]+)\/([^?#]*)/)
     if (m && !S.figma.nombreArchivo) {
@@ -774,6 +943,9 @@ $('#campos').addEventListener('input', (e) => {
       document.getElementById('f-figma.nombreArchivo').value = S.figma.nombreArchivo
     }
   }
+  revisaErrorPaso()
+  actualizaNecesarios()
+  invalidaPruebas(ruta)
 })
 $('#campos').addEventListener('change', (e) => {
   const t = e.target
@@ -783,6 +955,7 @@ $('#campos').addEventListener('change', (e) => {
       : S.grupos.filter((g) => g !== t.dataset.grupo)
     return guardar()
   }
+  if (t.dataset.ruta) invalidaPruebas(t.dataset.ruta)
   if (t.type === 'radio' && t.dataset.ruta) {
     set(t.dataset.ruta, t.value)
     pinta()
@@ -856,6 +1029,9 @@ function respuestas() {
   if (!r.proyecto.destino) r.proyecto.destino = defectoDestino
   if (!r.auth.login.brand) r.auth.login.brand = r.proyecto.nombre
   if (!r.github.nombre) r.github.nombre = r.proyecto.slug
+  // Se envía la lista ya depurada; con «grupos» saltado el generador la ignoraría.
+  r.grupos = depuraGrupos().grupos
+  r.saltados = r.saltados.filter((x) => x !== 'grupos')
   return r
 }
 
@@ -865,6 +1041,14 @@ async function finalizar() {
   $('#btn-borrar').disabled = true
   const pre = $('#progreso-lineas')
   pre.textContent = ''
+  $('#progreso-titulo').textContent = 'Generando…'
+  $('#progreso-final').innerHTML = ''
+  $('#btn-salir').hidden = true
+  const caida = (e) =>
+    pintaFinal({
+      estado: 'error',
+      resultado: { error: `No se pudo hablar con el servidor del asistente: ${e.message}` },
+    })
   let id
   try {
     ;({ id } = await api('/api/generar', {
@@ -873,11 +1057,15 @@ async function finalizar() {
       body: JSON.stringify(respuestas()),
     }))
   } catch (e) {
-    pre.textContent = `✖ No se pudo hablar con el servidor: ${e.message}`
-    return
+    return caida(e)
   }
   const sondea = async () => {
-    const t = await api(`/api/progreso/${id}`)
+    let t
+    try {
+      t = await api(`/api/progreso/${id}`)
+    } catch (e) {
+      return caida(e)
+    }
     pre.textContent = t.lineas.join('\n')
     pre.scrollTop = pre.scrollHeight
     if (t.estado === 'en-curso') return setTimeout(sondea, 1000)
@@ -891,9 +1079,9 @@ function pintaFinal(t) {
   const ok = t.estado === 'ok'
   $('#progreso-titulo').textContent = ok ? 'Listo' : 'Algo ha fallado'
   const salir = $('#btn-salir')
-  if (salir && !salir.dataset.listo) {
+  salir.hidden = false
+  if (!salir.dataset.listo) {
     salir.dataset.listo = '1'
-    salir.hidden = false
     salir.addEventListener('click', async () => {
       salir.disabled = true
       salir.textContent = 'Cerrando…'
@@ -935,6 +1123,7 @@ ${S.comprobar ? '' : 'npm install\n'}npm run storybook</pre>
   document.getElementById('btn-volver')?.addEventListener('click', () => {
     $('#progreso').hidden = true
     $('#formulario').hidden = false
+    pinta()
   })
 }
 
