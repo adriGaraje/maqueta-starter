@@ -10,8 +10,11 @@ publicado. Sale configurado con lo que respondas; lo que saltes queda como `TODO
 Sin clonar nada, desde la carpeta donde quieras que nazca el proyecto:
 
 ```sh
-npx github:adriGaraje/maqueta-starter
+npx --allow-git=all github:adriGaraje/maqueta-starter
 ```
+
+(`--allow-git=all` hace falta desde npm 12, que no descarga paquetes de git por defecto; con npm 10 o 11
+sobra. Para no escribirlo cada vez: `npm config set allow-git all`.) Sin `sudo`: todo es de tu usuario.
 
 Abre el asistente, genera el proyecto en `./<slug>` (o donde digas) y, cuando todo está
 generado y comprobado, **se borra de la caché de npx** y apaga el servidor. Hace falta Node 20 y,
