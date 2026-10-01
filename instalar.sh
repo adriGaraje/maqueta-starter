@@ -220,7 +220,7 @@ main() {
     # se cierra solo y se sigue; cualquier otro proceso se respeta.
     local pid_viejo
     pid_viejo="$(lsof -nP -iTCP:"$PUERTO" -sTCP:LISTEN -t 2>/dev/null | head -1)"
-    if [ -n "$pid_viejo" ] && ps -o command= -p "$pid_viejo" 2>/dev/null | grep -q "servidor.mjs"; then
+    if [ -n "$pid_viejo" ] && ps -o command= -p "$pid_viejo" 2>/dev/null | grep -Eq "servidor\.mjs|maqueta-starter"; then
       kill "$pid_viejo" 2>/dev/null; sleep 1
       ok "Puerto ${PUERTO}: había un asistente anterior (PID ${pid_viejo}); cerrado"
     else
