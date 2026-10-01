@@ -231,7 +231,6 @@ main() {
   else
     ok "Puerto ${PUERTO} libre"
   fi
-  return 0
 
   # 6. Lanzar. stdin desde /dev/null: con curl | bash, npx se comería el resto del script.
   echo
