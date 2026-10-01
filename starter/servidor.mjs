@@ -281,6 +281,10 @@ const servidor = createServer(async (req, res) => {
         destino: resolve(process.cwd(), url.searchParams.get('slug') || ''),
       })
     if (req.method === 'GET' && url.pathname === '/api/yo') return json(res, 200, yo())
+    if (req.method === 'POST' && url.pathname === '/api/salir') {
+      setTimeout(() => apaga('Cierre desde la página'), 300)
+      return json(res, 200, { ok: true })
+    }
     if (req.method === 'GET' && url.pathname === '/api/comprobar-destino') {
       const ruta = url.searchParams.get('ruta')
       if (!ruta) return json(res, 400, { error: 'Falta ?ruta=' })
@@ -321,6 +325,16 @@ else console.log(`✔ Puerto ${PUERTO} libre`)
 
 if (SOLO_DIAGNOSTICO) process.exit(nodeOk && libre ? 0 : 1)
 if (!libre) process.exit(1)
+
+// El puerto no se queda colgado: Ctrl+C, Ctrl+Z, cerrar la terminal (SIGHUP) o un
+// `kill` cierran el servidor y salen. Ctrl+Z suspendería el proceso con el puerto
+// cogido, así que aquí se trata como un cierre.
+const apaga = (senal) => {
+  console.log(`\n${senal}: cierro el asistente y libero el puerto ${PUERTO}.`)
+  servidor.close(() => process.exit(0))
+  setTimeout(() => process.exit(0), 1500).unref()
+}
+for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGTSTP']) process.on(s, () => apaga(s))
 
 servidor.listen(PUERTO, '127.0.0.1', () => {
   caja('Asistente en marcha  (Ctrl+C para salir)', [

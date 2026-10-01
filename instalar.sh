@@ -216,18 +216,35 @@ main() {
     quien="otro proceso"
   fi
   if [ -n "$quien" ]; then
-    mal "El puerto ${PUERTO} está ocupado por ${quien}."
-    nota "Ciérralo o elige otro: bash instalar.sh --port $((PUERTO + 1))"
-    return 1
+    # Si quien lo tiene es un asistente anterior (un starter que se quedó colgado),
+    # se cierra solo y se sigue; cualquier otro proceso se respeta.
+    local pid_viejo
+    pid_viejo="$(lsof -nP -iTCP:"$PUERTO" -sTCP:LISTEN -t 2>/dev/null | head -1)"
+    if [ -n "$pid_viejo" ] && ps -o command= -p "$pid_viejo" 2>/dev/null | grep -q "servidor.mjs"; then
+      kill "$pid_viejo" 2>/dev/null; sleep 1
+      ok "Puerto ${PUERTO}: había un asistente anterior (PID ${pid_viejo}); cerrado"
+    else
+      mal "El puerto ${PUERTO} está ocupado por ${quien}."
+      nota "Ciérralo o elige otro: bash instalar.sh --port $((PUERTO + 1))"
+      return 1
+    fi
+  else
+    ok "Puerto ${PUERTO} libre"
   fi
-  ok "Puerto ${PUERTO} libre"
+  return 0
 
   # 6. Lanzar. stdin desde /dev/null: con curl | bash, npx se comería el resto del script.
   echo
   echo "Lanzando: npx ${npx_flags[*]} github:${REPO} ${args[*]:-}"
   echo "(la primera vez descarga el asistente; puede tardar un minuto)"
   echo
-  npx "${npx_flags[@]}" "github:${REPO}" ${args[@]+"${args[@]}"} </dev/null
+  # El asistente corre como hijo; si esta shell muere (cerrar la terminal, Ctrl+C,
+  # Ctrl+Z, kill), el hijo muere con ella y el puerto queda libre.
+  npx "${npx_flags[@]}" "github:${REPO}" ${args[@]+"${args[@]}"} </dev/null &
+  HIJO=$!
+  mata_hijo() { kill "$HIJO" 2>/dev/null; wait "$HIJO" 2>/dev/null; }
+  trap 'mata_hijo; final; exit 130' INT TERM HUP TSTP
+  wait "$HIJO"
 }
 
 main "$@"

@@ -890,6 +890,19 @@ function pintaFinal(t) {
   const r = t.resultado ?? {}
   const ok = t.estado === 'ok'
   $('#progreso-titulo').textContent = ok ? 'Listo' : 'Algo ha fallado'
+  const salir = $('#btn-salir')
+  if (salir && !salir.dataset.listo) {
+    salir.dataset.listo = '1'
+    salir.hidden = false
+    salir.addEventListener('click', async () => {
+      salir.disabled = true
+      salir.textContent = 'Cerrando…'
+      try {
+        await fetch('/api/salir', { method: 'POST' })
+      } catch {}
+      salir.textContent = 'Asistente cerrado. Puedes cerrar esta pestaña.'
+    })
+  }
   $('#btn-borrar').disabled = false
   const lista = (xs) => `<ul>${xs.map((x) => `<li>${x}</li>`).join('')}</ul>`
   const amano = [
