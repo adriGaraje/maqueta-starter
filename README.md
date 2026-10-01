@@ -7,7 +7,19 @@ publicado. Sale configurado con lo que respondas; lo que saltes queda como `TODO
 
 ## Arrancar
 
-Sin clonar nada, desde la carpeta donde quieras que nazca el proyecto:
+Desde la carpeta donde quieras que nazca el proyecto:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/adriGaraje/maqueta-starter/main/instalar.sh | bash
+```
+
+`instalar.sh` comprueba, una línea `✔`/`✖` por paso y qué hacer si falla: git, Node ≥ 20 (si falta
+o es viejo, instala **Node 24 con nvm** en tu usuario; en una terminal pregunta antes), npm ≥ 9,
+acceso al repo y que el puerto 4747 esté libre. Luego lanza el asistente. Las opciones pasan tal
+cual: `curl … | bash -s -- --port 5000 --no-open`. Con `--sin-instalar` solo dice qué falta.
+También vale descargarlo y ejecutarlo: `bash instalar.sh`.
+
+Si ya tienes Node 20+ y npm, el `npx` directo:
 
 ```sh
 npx --allow-git=all github:adriGaraje/maqueta-starter
@@ -16,9 +28,23 @@ npx --allow-git=all github:adriGaraje/maqueta-starter
 (`--allow-git=all` hace falta desde npm 12, que no descarga paquetes de git por defecto; con npm 10 o 11
 sobra. Para no escribirlo cada vez: `npm config set allow-git all`.) Sin `sudo`: todo es de tu usuario.
 
-Abre el asistente, genera el proyecto en `./<slug>` (o donde digas) y, cuando todo está
-generado y comprobado, **se borra de la caché de npx** y apaga el servidor. Hace falta Node 20 y,
-al ser un repo privado, el token de GitHub configurado en git.
+Al arrancar imprime un **autodiagnóstico** (Node, npm, desde dónde corre, dónde creará el
+proyecto, puerto) y la URL. Abre el asistente, genera el proyecto en `./<slug>` (o donde digas) y,
+cuando todo está generado y comprobado, **se borra de la caché de npx** y apaga el servidor.
+`--diagnostico` hace solo las comprobaciones y sale.
+
+### Si no pasa nada
+
+- **El navegador no se abre.** Entra a mano en <http://localhost:4747> (o el puerto que hayas
+  dado). Si la consola dice que el puerto está ocupado, dice también por quién: ciérralo o usa
+  `--port 4748`.
+- **No hay acceso al repo.** Casi siempre es la red: sin conexión o un proxy/VPN que corta
+  GitHub (`git ls-remote https://github.com/adriGaraje/maqueta-starter.git` lo confirma). Si el
+  repo fuese privado, hace falta además aceptar la invitación
+  (<https://github.com/adriGaraje/maqueta-starter/invitations>) y tener git autenticado
+  (`gh auth login` o un token en el llavero).
+- **Node o npm viejos.** Con Node < 20 o npm < 9, `npx` falla o no arranca nada. `instalar.sh`
+  instala Node 24 con nvm; a mano: `nvm install 24 && nvm use 24`.
 
 Desde un clon, para desarrollar el starter:
 
@@ -28,7 +54,7 @@ npm i          # solo Prettier: el starter no tiene dependencias de runtime
 npm run starter
 ```
 
-Se abre `http://localhost:4747` (`-- --no-open` para no abrirlo, `-- --puerto 5000` para otro).
+Se abre `http://localhost:4747` (`-- --no-open` para no abrirlo, `-- --port 5000` para otro, `-- --diagnostico` solo comprueba).
 
 ## Los pasos
 

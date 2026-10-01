@@ -23,6 +23,7 @@
     "extras",
     "respuestas.ejemplo.json",
     "README.md",
+    "instalar.sh",
     "docs"
   ],
   "dependencies": {

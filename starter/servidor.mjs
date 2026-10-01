@@ -14,7 +14,8 @@
 //  Las pruebas salen de aquí, nunca del navegador, y los tokens solo viven en
 //  memoria durante la petición: no se escribe nada en disco hasta Finalizar.
 //
-//  Uso: npm run starter [-- --no-open] [--puerto 4747]
+//  Uso: npm run starter [-- --no-open] [--port 4747] [--diagnostico]
+//  (`--puerto` sigue valiendo como sinónimo de `--port`.)
 // =============================================================================
 import { spawn, spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -60,8 +61,103 @@ const limpiaCacheNpx = (t) => {
   }, 10000)
 }
 const argv = process.argv.slice(2)
-const iP = argv.indexOf('--puerto')
+const iP = argv.findIndex((a) => a === '--port' || a === '--puerto')
 const PUERTO = Number(iP >= 0 ? argv[iP + 1] : process.env.PORT) || 4747
+const SOLO_DIAGNOSTICO = argv.includes('--diagnostico')
+const NO_ABRIR = argv.includes('--no-open')
+
+// --- autodiagnóstico ---------------------------------------------------------
+// Un arranque que no dice nada es indistinguible de uno que no ha arrancado:
+// todo lo que importa para saber qué pasa sale en consola antes de escuchar.
+const caja = (titulo, lineas) => {
+  const ancho = Math.max(titulo.length + 2, ...lineas.map((l) => l.length)) + 2
+  const borde = '─'.repeat(ancho)
+  console.log(`┌${borde}┐`)
+  console.log(`│ ${titulo.padEnd(ancho - 1)}│`)
+  console.log(`├${borde}┤`)
+  for (const l of lineas) console.log(`│ ${l.padEnd(ancho - 1)}│`)
+  console.log(`└${borde}┘`)
+}
+
+const versionNpm = () => {
+  // Lanzado con npx, npm deja su versión en el user agent; si no, se pregunta.
+  const ua = process.env.npm_config_user_agent?.match(/npm\/([\d.]+)/)
+  if (ua) return ua[1]
+  const r = spawnSync('npm', ['--version'], {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  })
+  return r.status === 0 ? r.stdout.trim() : null
+}
+
+// Quién escucha en el puerto, para decirlo en vez de soltar un EADDRINUSE.
+const quienUsaPuerto = (puerto) => {
+  if (process.platform === 'win32') return null
+  const r = spawnSync('lsof', ['-nP', `-iTCP:${puerto}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
+  const fila = r.stdout?.split('\n')[1]?.trim()
+  if (!fila) return null
+  const [comando, pid] = fila.split(/\s+/)
+  return `${comando} (PID ${pid})`
+}
+
+const puertoLibre = (puerto) =>
+  new Promise((ok) => {
+    const s = createServer()
+    s.once('error', () => ok(false))
+    s.listen(puerto, '127.0.0.1', () => s.close(() => ok(true)))
+  })
+
+const URL_ASISTENTE = `http://localhost:${PUERTO}`
+
+function diagnostico() {
+  const node = process.versions.node
+  const npm = versionNpm()
+  const nodeOk = Number(node.split('.')[0]) >= 20
+  const npmOk = npm && Number(npm.split('.')[0]) >= 9
+  caja('maqueta-starter · autodiagnóstico', [
+    `${nodeOk ? '✔' : '✖'} Node      ${node}${nodeOk ? '' : '  (hace falta ≥ 20)'}`,
+    `${npmOk ? '✔' : '✖'} npm       ${npm || 'no encontrado'}${npm && !npmOk ? '  (hace falta ≥ 9)' : ''}`,
+    `  Corre desde ${EN_CACHE_NPX ? 'la caché de npx' : 'un clon'}: ${RAIZ}`,
+    `  Proyectos en ${process.cwd()}`,
+    `  Puerto    ${PUERTO}`,
+  ])
+  return nodeOk
+}
+
+function avisaPuertoOcupado() {
+  const quien = quienUsaPuerto(PUERTO)
+  caja(`✖ El puerto ${PUERTO} está ocupado`, [
+    quien ? `Lo usa: ${quien}` : 'Lo usa otro proceso.',
+    quien ? 'Ciérralo, o arranca en otro puerto:' : 'Arranca en otro puerto:',
+    `  npx --allow-git=all github:adriGaraje/maqueta-starter --port ${PUERTO + 1}`,
+    `  npm run starter -- --port ${PUERTO + 1}   (desde un clon)`,
+  ])
+}
+
+function abrirNavegador(dir) {
+  const abrir =
+    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open'
+  const falla = (motivo) =>
+    caja('✖ No he podido abrir el navegador', [
+      `${abrir}: ${motivo}`,
+      `Ábrelo tú y entra en ${dir}`,
+    ])
+  try {
+    const hijo = spawn(abrir, [dir], {
+      stdio: 'ignore',
+      detached: true,
+      shell: process.platform === 'win32',
+    })
+    hijo.on('error', (e) => falla(e.code === 'ENOENT' ? 'no está instalado' : e.message))
+    hijo.on('exit', (code) => {
+      if (code) falla(`terminó con código ${code}`)
+      else console.log(`✔ Navegador abierto en ${dir}`)
+    })
+    hijo.unref()
+  } catch (e) {
+    falla(e.message)
+  }
+}
 
 const ESTATICOS = {
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -218,21 +314,25 @@ const servidor = createServer(async (req, res) => {
   }
 })
 
+const nodeOk = diagnostico()
+const libre = await puertoLibre(PUERTO)
+if (!libre) avisaPuertoOcupado()
+else console.log(`✔ Puerto ${PUERTO} libre`)
+
+if (SOLO_DIAGNOSTICO) process.exit(nodeOk && libre ? 0 : 1)
+if (!libre) process.exit(1)
+
 servidor.listen(PUERTO, '127.0.0.1', () => {
-  const dir = `http://localhost:${PUERTO}`
-  console.log(`Asistente de maqueta-starter en ${dir}  (Ctrl+C para salir)`)
-  if (argv.includes('--no-open')) return
-  const abrir =
-    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open'
-  spawn(abrir, [dir], { stdio: 'ignore', detached: true, shell: process.platform === 'win32' })
-    .on('error', () => {})
-    .unref()
+  caja('Asistente en marcha  (Ctrl+C para salir)', [
+    '',
+    `   ▶  ${URL_ASISTENTE}`,
+    '',
+    'Si el navegador no se abre, copia esa dirección en él.',
+  ])
+  if (!NO_ABRIR) abrirNavegador(URL_ASISTENTE)
 })
 servidor.on('error', (e) => {
-  console.error(
-    e.code === 'EADDRINUSE'
-      ? `El puerto ${PUERTO} está ocupado: npm run starter -- --puerto <otro>`
-      : e.message
-  )
+  if (e.code === 'EADDRINUSE') avisaPuertoOcupado()
+  else console.error(`✖ ${e.message}`)
   process.exit(1)
 })
