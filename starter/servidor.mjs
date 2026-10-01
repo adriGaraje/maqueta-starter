@@ -17,7 +17,15 @@
 // =============================================================================
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
@@ -32,6 +40,24 @@ import {
 
 const AQUI = dirname(fileURLToPath(import.meta.url))
 const RAIZ = resolve(AQUI, '..')
+
+// Lanzado con `npx github:…`, el starter vive en la caché de npm (~/.npm/_npx/<hash>/).
+// Cuando el proyecto ya está generado y comprobado, esa copia sobra: se borra sola
+// y el servidor se apaga. Con `npm run starter` desde un clon, no se toca nada.
+const EN_CACHE_NPX = /[\\/]_npx[\\/]/.test(RAIZ)
+const limpiaCacheNpx = (t) => {
+  if (!EN_CACHE_NPX) return
+  const carpeta = RAIZ.replace(/([\\/]_npx[\\/][^\\/]+).*$/, '$1')
+  t.lineas.push(
+    `✔ Herramienta borrada de la caché de npx (${carpeta}); el servidor se apaga en 10 s.`
+  )
+  setTimeout(() => {
+    try {
+      rmSync(carpeta, { recursive: true, force: true })
+    } catch {}
+    process.exit(0)
+  }, 10000)
+}
 const argv = process.argv.slice(2)
 const iP = argv.indexOf('--puerto')
 const PUERTO = Number(iP >= 0 ? argv[iP + 1] : process.env.PORT) || 4747
@@ -113,6 +139,7 @@ function generar(respuestas) {
   hijo.on('close', (code) => {
     if (resto) linea(resto)
     t.estado = code === 0 && t.resultado?.ok ? 'ok' : 'error'
+    if (t.estado === 'ok') limpiaCacheNpx(t)
   })
   return id
 }
@@ -135,7 +162,8 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/defecto')
       return json(res, 200, {
         raiz: RAIZ,
-        destino: resolve(RAIZ, '..', url.searchParams.get('slug') || ''),
+        // El proyecto se crea donde el usuario lanzó el starter, nunca dentro del starter.
+        destino: resolve(process.cwd(), url.searchParams.get('slug') || ''),
       })
     if (req.method === 'GET' && url.pathname === '/api/comprobar-destino') {
       const ruta = url.searchParams.get('ruta')

@@ -23,6 +23,11 @@
       <main id="panel" class="panel" tabindex="-1">
         <form id="formulario" novalidate autocomplete="off">
           <h2 id="titulo-paso" class="panel__titulo"></h2>
+          <p class="panel__aviso" id="aviso-destino" hidden>
+            Esta herramienta no es tu proyecto: el proyecto se creará en
+            <code id="aviso-destino-ruta"></code>, con su propio git. El starter no deja nada
+            dentro.
+          </p>
           <p id="intro-paso" class="panel__intro"></p>
           <div id="campos"></div>
           <p id="error-paso" class="panel__error" role="alert" hidden></p>

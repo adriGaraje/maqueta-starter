@@ -122,6 +122,12 @@ async function pideDefecto() {
   if (!S.proyecto.slug) return
   try {
     defectoDestino = (await api(`/api/defecto?slug=${encodeURIComponent(S.proyecto.slug)}`)).destino
+    const aviso = document.getElementById('aviso-destino')
+    if (aviso) {
+      aviso.hidden = false
+      document.getElementById('aviso-destino-ruta').textContent =
+        (S._destinoTocado && S.proyecto.destino) || defectoDestino
+    }
     if (!S._destinoTocado) {
       set('proyecto.destino', defectoDestino)
       const i = document.getElementById('f-proyecto.destino')

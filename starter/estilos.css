@@ -407,3 +407,15 @@ pre {
 .prueba__res--omitido {
   color: var(--suave);
 }
+
+.panel__aviso {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #1e3a8a;
+  font-size: 14px;
+}
+.panel__aviso code {
+  font-size: 13px;
+}

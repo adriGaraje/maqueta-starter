@@ -15,5 +15,17 @@
   },
   "devDependencies": {
     "prettier": "^3.3.3"
-  }
+  },
+  "bin": {
+    "maqueta-starter": "starter/servidor.mjs"
+  },
+  "files": [
+    "starter",
+    "scripts",
+    "template",
+    "extras",
+    "respuestas.ejemplo.json",
+    "README.md",
+    "docs"
+  ]
 }

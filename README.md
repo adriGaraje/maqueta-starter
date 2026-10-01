@@ -7,6 +7,18 @@ publicado. Sale configurado con lo que respondas; lo que saltes queda como `TODO
 
 ## Arrancar
 
+Sin clonar nada, desde la carpeta donde quieras que nazca el proyecto:
+
+```sh
+npx github:adriGaraje/maqueta-starter
+```
+
+Abre el asistente, genera el proyecto en `./<slug>` (o donde digas) y, cuando todo está
+generado y comprobado, **se borra de la caché de npx** y apaga el servidor. Hace falta Node 20 y,
+al ser un repo privado, el token de GitHub configurado en git.
+
+Desde un clon, para desarrollar el starter:
+
 ```sh
 nvm use        # Node 20
 npm i          # solo Prettier: el starter no tiene dependencias de runtime
