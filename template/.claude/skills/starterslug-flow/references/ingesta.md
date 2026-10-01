@@ -67,7 +67,7 @@ Por cada nodo marcado:
    Figma no puede duplicar una tarea. Si ya hay tarea para ese nodo, no se toca.
 2. **El subagente `config.models.analyst.agentName` (el Ojo) lee el nodo** y redacta la
    descripción AI-ready según `config.docs.jiraWorkflow`: contexto, criterios de aceptación, ficheros, dependencias, tokens
-   y hooks Django previstos.
+   y hooks previstos (sintaxis del perfil de hand-off).
 3. **Se crea la tarea de la página**, y **una por cada módulo suyo que no exista en el repo**,
    enlazadas como dependencia de la de página. Es lo que refleja el trabajo real: la página no
    se puede cerrar sin sus piezas.

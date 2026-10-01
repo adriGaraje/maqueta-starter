@@ -163,8 +163,8 @@ const clasesQueUsa = (html) =>
   new Set(
     [...html.matchAll(/class="([^"]*)"/g)]
       .flatMap((m) => m[1].split(/\s+/))
-      // Los hooks Django dentro de un class="" no son clases.
-      .filter((c) => c && !c.includes('{') && !c.includes('%'))
+      // Los hooks del backend dentro de un class="" no son clases (cualquier perfil).
+      .filter((c) => c && !/[{}%<>$@?]/.test(c))
   )
 
 // Las piezas que un HTML compone, por las dos vías en que puede declararlo:

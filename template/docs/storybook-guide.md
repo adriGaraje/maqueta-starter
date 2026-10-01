@@ -24,7 +24,7 @@ explicaciones largas sobran cuando el addon lo enseña en directo.
 
 El panel `Code` (`.storybook/manager.jsx`) es global — sale en toda story. Muestra lo que emite
 `docs.source`, así que **cada story de componente define `docs.source.transform`** para que el snippet
-salga limpio (sin envoltorios de decorator) y con los hooks Django intactos:
+salga limpio (sin envoltorios de decorator) y con los hooks del backend intactos:
 
 ```js
 // pieza construida desde args (botón):
@@ -76,7 +76,7 @@ Los grupos de Storybook = los tiers del repo (1:1):
 | layout    | chrome global (header/footer)  | `src/layouts/<name>/`    | Snippet global      |
 | page      | página que compone módulos     | `src/pages/<name>/`      | una página del CMS  |
 
-Anatomía: `<name>.html` (+ hooks Django + comentario de mapeo), `<name>.scss` opcional (registrar en
+Anatomía: `<name>.html` (+ hooks del backend + comentario de mapeo), `<name>.scss` opcional (registrar en
 `styles/components/_index.scss`), `<name>.js` opcional, `<name>.stories.js`, `<name>.mdx` (hand-off).
 
 ## 3. Nada de envoltorios dentro de la story
@@ -114,7 +114,7 @@ Qué es y cómo entregarla…
 <Source code={scss} language="scss" />
 ```
 
-- El `.html` conserva los `{{ }}` / `{% %}` (contrato Django); el `Source` lo muestra tal cual.
+- El `.html` conserva sus hooks (contrato con el backend, en la sintaxis de `config.repo.handoff`); el `Source` lo muestra tal cual.
 - El `.scss` es solo el CSS propio. La base compartida (reset + `.text-preset-*` + OnAir) se entrega
   **una vez por página**, no por Snippet.
 
@@ -186,7 +186,7 @@ Pages · Snippets`, que no hay por dónde leerlo.
 ## 6. Checklist de alta de una pieza
 
 1. Carpeta en el nivel correcto, nombre kebab-case (Story Map).
-2. HTML Bootstrap 4.1.3 + hooks Django + comentario de mapeo `{{ var }} → .clase`.
+2. HTML Bootstrap 4.1.3 + hooks del backend + comentario de mapeo `<hook> → .clase`.
 3. SCSS solo si Bootstrap no llega; registrar en `styles/components/_index.scss`.
 4. JS solo si hace falta; enganchar en `scripts/main.js`.
 5. Story: `title` en la sección que toca (`Design System/` o el nivel atómico que corresponda), `args`/`argTypes` para el texto editable, `withActions`, `tags: ['WIP']` (obligatorio),

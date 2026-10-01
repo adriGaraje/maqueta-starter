@@ -1,10 +1,10 @@
 // Las dos piezas que arman la ficha de un snippet:
 //
 //   <CodeTabs>   HTML · CSS · JS en pestañas, en vez de tres bloques apilados.
-//   <Variables>  la tabla de hooks Django, DEDUCIDA del comentario del partial.
+//   <Variables>  la tabla de hooks del backend, DEDUCIDA del comentario del partial.
 //
 // Lo de deducirla no es un truco: es lo que evita que se desalineen. El mapeo
-// «{{ hero.title }} → titular» vive en el comentario de cabecera del HTML, que es
+// «<hook> → titular», en la sintaxis del perfil de hand-off, vive en el comentario de cabecera del HTML, que es
 // donde lo escribe quien maqueta. Ese comentario no se publica —lo filtra
 // `snippet-code.js`— pero de él sale la tabla que sí se publica. Un hook nuevo
 // aparece en la tabla solo, y uno que se va, desaparece.
@@ -16,6 +16,7 @@
 import React, { useState } from 'react'
 import { Source } from '@storybook/addon-docs/blocks'
 import { limpia } from './snippet-code.js'
+import { esHook } from './lib/hooks.js'
 
 const AZUL = '#0050FF'
 const BORDE = 'rgba(128,128,150,.28)'
@@ -86,9 +87,10 @@ export const CodeTabs = ({ html, css, js }) => {
 }
 
 // ── La tabla de variables ───────────────────────────────────────────────────
-// Del comentario de cabecera se sacan las líneas con forma `{{ algo }} → qué es`.
+// Del comentario de cabecera se sacan las líneas con forma `<hook> → qué es`: las
+// que empiezan por un hook del perfil (`esHook`). Con el perfil `html`, ninguna.
 
-const FILA = /^\s*(\{[{%][\s\S]*?)\s+→\s+(.+?)\s*$/
+const FILA = /^\s*(\S[\s\S]*?)\s+→\s+(.+?)\s*$/
 
 const filasDe = (html) => {
   const comentario = html.match(/<!--([\s\S]*?)-->/)
@@ -97,7 +99,7 @@ const filasDe = (html) => {
   return comentario[1]
     .split('\n')
     .map((linea) => linea.match(FILA))
-    .filter(Boolean)
+    .filter((m) => m && esHook(m[1]))
     .map((m) => ({ hook: m[1].trim(), significa: m[2].trim() }))
 }
 

@@ -4,7 +4,7 @@
     "slug": "acme",
     "destino": "/private/tmp/claude-507/starter-prueba",
     "descripcion": "Maqueta de la nueva web de Acme, entregada como plantillas del CMS.",
-    "cms": "Django",
+    "handoff": "django",
     "webEnVivo": "www.acme.example"
   },
   "figma": {
@@ -70,7 +70,7 @@
       "surface": "#f3f4f6"
     }
   },
-  "grupos": ["figma", "jira", "entrega", "django", "auth"],
+  "grupos": ["figma", "jira", "entrega", "hooks", "auth"],
   "comprobar": true,
   "saltados": []
 }

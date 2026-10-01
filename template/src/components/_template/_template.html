@@ -1,10 +1,22 @@
 <!--
   Template · copia esta carpeta para empezar una pieza nueva.
-  Mapeo Django:
-    {{ item.title }} → .component-name__title   el titular
-    {{ item.text }}  → .component-name__text    la entradilla
+  Hooks (Django):
+    {{ item.title }}                   → .component-name__title     el titular
+    {{ item.text }}                    → .component-name__text      la entradilla
+    {% if item.tag %}                  → .component-name__tag       la etiqueta; sin ella no se pinta
+    {{ item.tag }}                     → .component-name__tag       el texto de la etiqueta
+    {% for feature in item.features %} → .component-name__feature   una línea por ventaja
+    {{ feature.label }}                → .component-name__feature   el texto de cada ventaja
 -->
 <article class="component-name">
+  {% if item.tag %}
+  <span class="badge badge-primary component-name__tag">{{ item.tag }}</span>
+  {% endif %}
   <h3 class="component-name__title">{{ item.title }}</h3>
-  <p class="component-name__text mb-0">{{ item.text }}</p>
+  <p class="component-name__text">{{ item.text }}</p>
+  <ul class="component-name__features list-unstyled mb-0">
+    {% for feature in item.features %}
+    <li class="component-name__feature">{{ feature.label }}</li>
+    {% endfor %}
+  </ul>
 </article>

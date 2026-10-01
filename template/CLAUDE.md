@@ -1,20 +1,35 @@
 # CLAUDE.md — Starternombre · Maqueta
 
-> La biblia del proyecto. Léela antes de tocar nada. Menos de 120 líneas; el detalle vive en `docs/`.
+> La biblia del proyecto. Léela antes de tocar nada. Menos de 130 líneas; el detalle vive en `docs/`.
 
 ## Qué es
 
 La **maqueta** front-end de Starternombre: HTML por componentes con **Bootstrap 4.1.3** + JS ligero,
 empaquetado con Vite y **entregado como plantillas para el CMS**. Nosotros hacemos el
-marcado, los estilos y el JS; el backend conecta las piezas (`{{ vars }}`, `{% for %}`, `{% include %}`).
+marcado, los estilos y el JS; el backend conecta las piezas.
+<!-- si:hooks -->
+**Destino del HTML: STARTERHANDOFF.** Los hooks van en su sintaxis: `STARTERHOOK_VAR`,
+`STARTERHOOK_FOR`, `STARTERHOOK_IF`.
+<!-- /si:hooks -->
+<!-- si:html -->
+**Destino del HTML: STARTERHANDOFF.** Sin hooks: el HTML se entrega con el texto literal y se pega
+tal cual en el CMS.
+<!-- /si:html -->
 
 **Es nuestro:** HTML, SCSS, JS, assets, la librería de componentes, Storybook.
 **No lo tocamos nunca:** modelos, vistas, migraciones ni lógica de backend.
 
 ## Reglas de oro
 
-1. **No renombres ni borres un hook del backend.** `{{ item.title }}`, `{% for %}`, `{% endif %}`…
-   se conservan exactos. Si no sabes de dónde sale una variable, pregunta.
+<!-- si:hooks -->
+1. **No renombres ni borres un hook del backend.** `STARTERHOOK_VAR`, `STARTERHOOK_FOR`,
+   `STARTERHOOK_IF`… se conservan exactos. Si no sabes de dónde sale una variable, pregunta.
+   Se escriben y se resuelven con `src/stories/lib/hooks.js` (perfil en `config.repo.handoff`).
+<!-- /si:hooks -->
+<!-- si:html -->
+1. **Sin hooks.** El destino es HTML estático: el texto va literal. Si cambia el destino, cambia
+   `config.repo.handoff` y reescribe los partials con `src/stories/lib/hooks.js`.
+<!-- /si:html -->
 2. **Bootstrap primero.** Clases, rejilla y utilidades de Bootstrap. La marca va en las variables
    SASS (`src/styles/settings/`). CSS propio solo cuando Bootstrap no llega.
 3. **Clases:** las de Bootstrap; las pocas propias en **BEM** kebab-case (`.bloque__elemento--mod`).
@@ -24,7 +39,10 @@ marcado, los estilos y el JS; el backend conecta las piezas (`{{ vars }}`, `{% f
 5. **Una carpeta = una pieza** (`html` + `scss`/`js` opcionales).
 6. **Sin frameworks JS.** JS propio en vanilla.
 7. **Los comentarios no llegan al bloque de código publicado** (`src/stories/snippet-code.js` los
-   filtra). El mapeo de variables del backend sí: va en la cabecera como `{{ var }} → qué es`.
+   filtra).
+<!-- si:hooks -->
+   El mapeo de variables del backend sí: va en la cabecera como `STARTERHOOK_VAR → qué es`.
+<!-- /si:hooks -->
 8. **Un snippet lleva su propio envoltorio**: se pega tal cual en el CMS, sin `<div>` de la
    página alrededor. Usa el mixin `wrap` en su SCSS.
 
@@ -33,7 +51,7 @@ marcado, los estilos y el JS; el backend conecta las piezas (`{{ vars }}`, `{% f
 ```
 src/
 ├── index.html      # entrada mínima de Vite
-├── components/     # piezas reutilizables (carpeta cada una) → {% include %}
+├── components/     # piezas reutilizables (carpeta cada una) → include del backend
 │   └── _template/  #   cópiala para empezar una pieza
 ├── modules/        # secciones de página ("snippets") → un snippet del CMS cada una
 ├── layouts/        # regiones del sitio (cabecera, pie)
@@ -72,10 +90,18 @@ Una pieza no está terminada sin su `<name>.mdx` (HTML/SCSS en bloques `?raw` + 
 Nada de datos inventados en el design system: stories solo de piezas y datos reales.
 Patrón de story: `src/components/_template/_template.stories.js`.
 
-## Hand-off al backend
+## Hand-off al backend: STARTERHANDOFF
 
-- Comentario de mapeo en cada pieza: `{{ item.title }} → .card__title`.
-- Un listado en la maqueta repite unos pocos ítems; la página real hace el bucle con `{% for %}`.
+<!-- si:hooks -->
+- Comentario de mapeo en cada pieza: `STARTERHOOK_VAR → .card__title`.
+- Un listado en la maqueta repite unos pocos ítems; la página real hace el bucle con
+  `STARTERHOOK_FOR`.
+- Los hooks se escriben (`var`, `bucle`, `si`) y se resuelven en la story (`pinta`) con
+  `src/stories/lib/hooks.js`; `npm run check:hooks` mira que ninguno llegue crudo al DOM.
+<!-- /si:hooks -->
+<!-- si:html -->
+- HTML estático: sin hooks ni mapeo de variables. Un listado se maqueta con sus ítems reales.
+<!-- /si:html -->
 
 ## Forma de trabajar
 

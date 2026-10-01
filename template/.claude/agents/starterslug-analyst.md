@@ -65,7 +65,7 @@ lanza). Usa las herramientas de Figma por MCP: `get_metadata`, `get_design_conte
 
 Guarda la captura de referencia en `docs/starterslug-harness/reports/<slug>/figma.png` y la spec en
 `docs/starterslug-harness/reports/<slug>/spec.md`, con: anatomía → estructura HTML, tokens, medidas
-exactas, mapeo Bootstrap-first, estados, responsive, hooks Django previstos y accesibilidad.
+exactas, mapeo Bootstrap-first, estados, responsive, hooks previstos (en la sintaxis del perfil de hand-off, `config.repo.handoff`; ninguno si es `html`) y accesibilidad.
 
 **Medidas reales, no aproximaciones.** «Unos 24 px» no sirve para verificar nada después.
 

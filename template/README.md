@@ -51,5 +51,5 @@ Lo que lleva este repo además de la base (Storybook, ITCSS, skill, Ojo, hooks, 
 - `figma` — `tokens:diff`, `figma:ready` y `sitemap:sync`: Figma como fuente de verdad (`FIGMA_TOKEN` en `.env`).
 - `jira` — `tasks/` y `tasks:mirror`: el espejo local del tablero.
 - `entrega` — `build:entrega`, `estado:entrega`, `deploy`, `check:entrega`: los globales, las Release Notes y Firebase Hosting.
-- `django` — `check:hooks`: que ningún hook del backend se pierda al maquetar.
+- `hooks` — `check:hooks`: que ningún hook del backend llegue crudo al DOM publicado (en la sintaxis del perfil de hand-off).
 - `auth` — la puerta de acceso del Storybook publicado con Firebase Auth: se configura en `auth/auth-config.js` y `auth/firebase-config.js`.

@@ -1,17 +1,26 @@
 // Asistente de pasos. Sin frameworks: el estado es un objeto con la forma de
 // `respuestas.ejemplo.json`, y cada paso pinta sus campos a partir de él.
 
+import { PERFILES, sintaxisDe } from '/perfiles.js'
+
 const CLAVE = 'maqueta-starter:borrador'
 const GRUPOS = [
   ['figma', 'Figma', 'tokens:diff, figma:ready, sitemap:sync y el plugin de Figma'],
   ['jira', 'Jira', 'tasks/ como espejo del tablero, tasks:mirror y el plugin de Atlassian'],
   ['entrega', 'Entrega', 'globales, Release Notes, deploy a Firebase Hosting (pre y entrega)'],
-  ['django', 'Django', 'check:hooks: que no se pierda ningún hook del backend'],
+  ['hooks', 'Hooks', 'check:hooks: comprobación de hooks crudos en el DOM publicado'],
   ['auth', 'Puerta de acceso', 'login con Firebase Auth delante del Storybook publicado'],
 ]
 
 const inicial = () => ({
-  proyecto: { nombre: '', slug: '', destino: '', descripcion: '', cms: '', webEnVivo: '' },
+  proyecto: {
+    nombre: '',
+    slug: '',
+    destino: '',
+    descripcion: '',
+    handoff: 'django',
+    webEnVivo: '',
+  },
   figma: {
     fileKey: '',
     nombreArchivo: '',
@@ -85,7 +94,18 @@ function cargar() {
     if (b && b.proyecto) {
       const i = inicial()
       const eq = Array.isArray(b.equipo) ? b.equipo[0] : b.equipo
-      return { ...i, ...b, github: { ...i.github, ...b.github }, equipo: { ...i.equipo, ...eq } }
+      // El grupo `django` se llama ahora `hooks`, y el destino es un perfil en vez de texto libre.
+      const grupos = (b.grupos ?? i.grupos).map((g) => (g === 'django' ? 'hooks' : g))
+      const proyecto = { ...i.proyecto, ...b.proyecto }
+      if (!PERFILES[proyecto.handoff]) proyecto.handoff = 'django'
+      return {
+        ...i,
+        ...b,
+        proyecto,
+        grupos,
+        github: { ...i.github, ...b.github },
+        equipo: { ...i.equipo, ...eq },
+      }
     }
   } catch {}
   return inicial()
@@ -152,6 +172,14 @@ async function pideDefecto() {
 
 const campo = (ruta, label, extra = {}) => ({ ruta, label, ...extra })
 
+// El destino del HTML: el mismo campo en «Proyecto» y en «Qué llevar».
+const CAMPO_HANDOFF = campo('proyecto.handoff', 'Destino del HTML / hand-off', {
+  tipo: 'lista',
+  opciones: Object.entries(PERFILES).map(([k, p]) => [k, `${p.label} — ${p.quien}`]),
+  ayudaFn: () =>
+    `${sintaxisDe(S.proyecto.handoff)}. Cambia los hooks del _template, check:hooks y CLAUDE.md.`,
+})
+
 const PASOS = [
   {
     id: 'proyecto',
@@ -172,10 +200,7 @@ const PASOS = [
       campo('proyecto.descripcion', 'Descripción', {
         placeholder: 'Maqueta de la nueva web de Acme.',
       }),
-      campo('proyecto.cms', 'CMS / hand-off', {
-        placeholder: 'Django, WordPress, ninguno…',
-        ayuda: 'Dónde acaban las piezas. Si es Django, el grupo «django» se marca solo.',
-      }),
+      CAMPO_HANDOFF,
       campo('proyecto.webEnVivo', 'Web en producción (host)', { placeholder: 'www.acme.com' }),
     ],
   },
@@ -372,7 +397,7 @@ const PASOS = [
     id: 'grupos',
     titulo: 'Qué llevar',
     intro:
-      'La base (Storybook, ITCSS, skill, Ojo, hooks, gates, lecciones) va siempre. El resto, a elegir.',
+      'La base (Storybook, ITCSS, skill, Ojo, hooks de Claude Code, gates, lecciones) va siempre. El destino del HTML se puede cambiar aquí; el resto, a elegir.',
     pinta: pintaGrupos,
   },
   {
@@ -411,10 +436,11 @@ function pintaCampo(c) {
   const id = `f-${c.ruta}`
   const val = get(c.ruta)
   const ancho = c.mitad ? ' campo--mitad' : c.tercio ? ' campo--tercio' : ''
-  const ayuda = c.ayuda
-    ? `<small id="${id}-ayuda" class="campo__ayuda">${esc(c.ayuda)}</small>`
+  const textoAyuda = c.ayudaFn ? c.ayudaFn() : c.ayuda
+  const ayuda = textoAyuda
+    ? `<small id="${id}-ayuda" class="campo__ayuda">${esc(textoAyuda)}</small>`
     : ''
-  const describe = c.ayuda ? ` aria-describedby="${id}-ayuda"` : ''
+  const describe = textoAyuda ? ` aria-describedby="${id}-ayuda"` : ''
   if (c.tipo === 'radio')
     return `<fieldset class="campo campo--radio"><legend>${esc(c.label)}</legend>${c.opciones
       .map(
@@ -422,6 +448,11 @@ function pintaCampo(c) {
           `<label><input type="radio" name="${id}" data-ruta="${c.ruta}" value="${esc(x)}" ${val === x ? 'checked' : ''}> ${esc(l)}</label>`
       )
       .join('')}</fieldset>`
+  if (c.tipo === 'lista')
+    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}</label>
+      <select id="${id}" data-ruta="${c.ruta}"${describe}>
+        ${c.opciones.map(([x, l]) => `<option value="${esc(x)}" ${x === val ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+      </select>${ayuda}</div>`
   if (c.tipo === 'select') {
     const ops = c.opcionesFn()
     const lista = ops.some((o) => o.login === val) || !val ? ops : [{ login: val }, ...ops]
@@ -562,12 +593,18 @@ document.addEventListener('click', (e) => {
       .forEach(probar)
 })
 
+// Sin hooks (perfil html) el grupo `hooks` no tiene nada que mirar: se desmarca;
+// al volver a un perfil con hooks, se vuelve a marcar.
+function cambiaHandoff(antes, ahora) {
+  if (PERFILES[ahora].sinHooks) S.grupos = S.grupos.filter((g) => g !== 'hooks')
+  else if (PERFILES[antes]?.sinHooks && !S.grupos.includes('hooks')) S.grupos.push('hooks')
+  guardar()
+}
+
 function pintaGrupos() {
-  if (/django/i.test(S.proyecto.cms) && !S.grupos.includes('django') && !S._djangoVisto) {
-    S.grupos.push('django')
-    S._djangoVisto = true
-  }
   const avisos = []
+  if (PERFILES[S.proyecto.handoff]?.sinHooks && S.grupos.includes('hooks'))
+    avisos.push('Con HTML estático no hay hooks: check:hooks viajará, pero se salta con un aviso.')
   if (!hayFirebase()) {
     for (const g of ['entrega', 'auth'])
       if (S.grupos.includes(g)) S.grupos = S.grupos.filter((x) => x !== g)
@@ -584,7 +621,7 @@ function pintaGrupos() {
     avisos.push('Saltaste Jira: el grupo viaja, pero el tablero queda en TODO.')
   guardar()
   const bloqueado = (g) => (g === 'entrega' && !hayFirebase()) || (g === 'auth' && !hayClaves())
-  return `<div class="grupos">${GRUPOS.map(
+  return `<div class="rejilla">${pintaCampo(CAMPO_HANDOFF)}</div><div class="grupos">${GRUPOS.map(
     ([g, l, d]) => `<label class="grupo ${bloqueado(g) ? 'grupo--off' : ''}">
       <input type="checkbox" data-grupo="${g}" ${S.grupos.includes(g) ? 'checked' : ''} ${bloqueado(g) ? 'disabled' : ''}>
       <span><strong>${l}</strong> <code>${g}</code><br><small>${d}</small></span></label>`
@@ -606,7 +643,7 @@ function filasResumen(paso) {
       let v = get(c.ruta)
       if (c.tipo === 'password') v = v ? '••••••' : ''
       if (c.tipo === 'checkbox') v = v ? 'sí' : 'no'
-      if (c.tipo === 'radio') v = c.opciones.find(([x]) => x === v)?.[1] ?? v
+      if (c.tipo === 'radio' || c.tipo === 'lista') v = c.opciones.find(([x]) => x === v)?.[1] ?? v
       const vacio = v === '' || v == null
       return `<tr>${i === 0 ? `<th rowspan="${filas.length}">${esc(p.titulo)}</th>` : ''}
         <td>${esc(c.label)}</td><td class="${vacio ? 'saltado' : ''}">${vacio ? 'TODO' : esc(v)}</td></tr>`
@@ -750,6 +787,13 @@ $('#campos').addEventListener('change', (e) => {
     set(t.dataset.ruta, t.value)
     pinta()
     return document.querySelector(`[data-ruta="${t.dataset.ruta}"]:checked`)?.focus()
+  }
+  if (t.tagName === 'SELECT' && t.dataset.ruta === 'proyecto.handoff') {
+    const antes = S.proyecto.handoff
+    set('proyecto.handoff', t.value)
+    cambiaHandoff(antes, t.value)
+    pinta()
+    return document.getElementById('f-proyecto.handoff')?.focus()
   }
   if (t.tagName === 'SELECT' && t.dataset.ruta) return set(t.dataset.ruta, t.value)
   if (t.type === 'checkbox' && t.dataset.ruta) {

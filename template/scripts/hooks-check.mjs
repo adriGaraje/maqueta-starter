@@ -1,4 +1,5 @@
-// Gate de hooks Django crudos en el DOM.
+// Gate de hooks crudos en el DOM, en la sintaxis del perfil de hand-off
+// (`config.repo.handoff`; la tabla, en src/stories/lib/hooks-perfiles.js).
 // ---------------------------------------------------------------------------
 // EL FALLO, dos veces el mismo. Los partials se resuelven a mano en varios
 // pintores distintos, y cuando un partial gana un `{% if %}` hay que acordarse de
@@ -40,8 +41,22 @@ import { existsSync, readFileSync } from 'node:fs'
 import { extname, join, resolve } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { PERFILES, clavePerfil } from '../src/stories/lib/hooks-perfiles.js'
 
 const run = promisify(execFile)
+
+const CONFIG = JSON.parse(readFileSync('docs/starterslug-harness/config.json', 'utf8'))
+const CLAVE = clavePerfil(CONFIG.repo?.handoff)
+const PERFIL = PERFILES[CLAVE]
+
+// HTML estático: no hay hooks, así que no hay nada crudo que buscar. Se dice, no se calla.
+if (PERFIL.sinHooks) {
+  console.log(
+    `Gate de hooks: saltado. El destino es «${PERFIL.label}» (config.repo.handoff = ${CLAVE}),\n` +
+      'sin hooks del backend: el HTML se entrega con el texto literal.'
+  )
+  process.exit(0)
+}
 
 const arg = (n, def) => {
   const i = process.argv.indexOf(`--${n}`)
@@ -92,7 +107,7 @@ const SONDA = `<pre id="sonda-out"></pre>
 <script>
 (() => {
   const limite = Date.now() + ${ESPERA}
-  const HOOK = /\\{\\{[\\s\\S]*?\\}\\}|\\{%[\\s\\S]*?%\\}/g
+  const HOOK = new RegExp(${JSON.stringify(PERFIL.crudo.source).replace(/</g, '\\u003c')}, 'g')
   const escribe = (r) => { document.getElementById('sonda-out').textContent = JSON.stringify(r) }
   const mira = () => {
     const raiz = document.querySelector('#storybook-root')
@@ -101,7 +116,8 @@ const SONDA = `<pre id="sonda-out"></pre>
       return escribe({ error: 'la story no montó: #storybook-root sigue vacío' })
     }
     try {
-      const sinComentarios = raiz.innerHTML.replace(/<!--[\\s\\S]*?-->/g, '')
+      // \`<!--?\` no es un comentario nuestro: es un \`<?php … ?>\` que el navegador comentó.
+      const sinComentarios = raiz.innerHTML.replace(/<!--(?!\\?)[\\s\\S]*?-->/g, '')
       const hooks = sinComentarios.match(HOOK) || []
       const cuenta = {}
       for (const h of hooks) cuenta[h.replace(/\\s+/g, ' ').trim()] = (cuenta[h.replace(/\\s+/g, ' ').trim()] || 0) + 1
@@ -191,14 +207,14 @@ const rotas = resultados.filter((r) => r.error)
 const sucias = resultados.filter((r) => !r.error && r.total > 0)
 const limpias = resultados.filter((r) => !r.error && r.total === 0)
 
-console.log(`\nGate de hooks Django   [build: ${DIR}]`)
+console.log(`\nGate de hooks ${PERFIL.label}   [build: ${DIR}]`)
 console.log(`  stories recorridas: ${resultados.length} de ${STORIES.length} declaradas`)
 console.log(`  leídas: ${limpias.length + sucias.length} · sin leer: ${rotas.length}\n`)
 
 for (const r of sucias.sort((a, b) => b.total - a.total)) {
   console.log(`  ✖ ${r.id}   ${r.total} hook(s) crudos en el DOM`)
   for (const [hook, n] of Object.entries(r.cuenta).sort((a, b) => b[1] - a[1])) {
-    console.log(`      ${String(n).padStart(3)} × ${hook}`)
+    console.log(`      ${String(n).padStart(3)} × ${desescapa(hook)}`)
   }
 }
 
@@ -207,7 +223,7 @@ for (const r of rotas) console.log(`  ? ${r.id}\n      ${r.error}`)
 if (sucias.length) {
   const total = sucias.reduce((n, r) => n + r.total, 0)
   console.log(
-    `\n  ✖ ${sucias.length} story(s) publican ${total} hook(s) Django sin resolver.\n` +
+    `\n  ✖ ${sucias.length} story(s) publican ${total} hook(s) ${PERFIL.label} sin resolver.\n` +
       '    Eso es texto de plantilla a la vista del cliente. El pintor de ese partial se\n' +
       '    quedó atrás: mira quién más lo resuelve antes de arreglar solo el que falla.'
   )
@@ -224,6 +240,6 @@ if (rotas.length) {
 }
 
 console.log(
-  `\n  ✔ Las ${limpias.length} stories de la build montan y ninguna publica un hook Django crudo.`
+  `\n  ✔ Las ${limpias.length} stories de la build montan y ninguna publica un hook ${PERFIL.label} crudo.`
 )
 process.exit(0)

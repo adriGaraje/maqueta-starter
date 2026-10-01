@@ -220,7 +220,7 @@ Resumen del bucle (cada paso detallado allí):
 2. **Extracción (el Ojo).** Subagente `config.models.analyst.agentName` lee el nodo de Figma (`get_metadata`,
    `get_design_context`, `get_screenshot`, `get_variable_defs`) y produce una **spec de maquetación**
    completa: estructura, tokens/variables, medidas, estados, responsive, mapeo a clases Bootstrap y
-   a hooks Django. Guarda la captura de referencia de Figma.
+   a hooks del perfil de hand-off. Guarda la captura de referencia de Figma.
 3. **Maquetación (la Mano, `config.models.maqueter`).** Subagente `maqueter` construye el
    componente con la anatomía del repo (`<name>.html` + `.scss` + `.stories.js` [+ `.mdx`]),
    Bootstrap-first, registra el SCSS en `config.paths.componentsIndex` (¡`@import`, no `@use` en
@@ -305,7 +305,7 @@ Deja este punto de extensión explícito y no lo hardcodees.
   llega a la de integración:
   `git merge-base --is-ancestor <commit> origin/<config.git.integrationBranch>` lo dice.
 - **Nunca** toques ficheros que otra tarea `In Progress` haya declarado en "Files likely touched".
-- **Nunca** renombres/borres hooks Django `{{ }}` / `{% %}`.
+- **Nunca** renombres/borres hooks del backend (la sintaxis del perfil de hand-off, `config.repo.handoff`).
 - **Nunca** pobles Storybook con datos falsos: solo stories de componentes reales.
 - Hotspots compartidos (`config.repo.appendOnlyHotspots`) son **append-only**; en conflicto,
   conserva ambas líneas.

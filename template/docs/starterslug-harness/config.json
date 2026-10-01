@@ -28,6 +28,7 @@
     "remote": "TODO",
     "stack": "Storybook 8 + Vite + HTML + SCSS (ITCSS) + Bootstrap 4.1.3",
     "handoff": "TODO",
+    "handoffLabel": "TODO",
     "greenGates": [
       "npm run build",
       "npm run lint:css",

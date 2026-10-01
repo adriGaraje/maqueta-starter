@@ -43,7 +43,7 @@ Si el agente cree que hace falta otro, lo dice en el informe; no lo corre.
 
 **Formato de spec (≤ 15 KB):** tablas, no prosa. (1) reparto vertical bloque a bloque con nodo,
 y, alto; (2) por bloque: existente/modificado/nuevo, medidas en `text-style('…')` y tokens;
-(3) hooks Django; (4) **contenido transcrito en un bloque JSON listo para `datos-*.js`**; (5) assets
+(3) hooks del perfil de hand-off (`config.repo.handoff`); (4) **contenido transcrito en un bloque JSON listo para `datos-*.js`**; (5) assets
 con node-id, escala y recorte; (6) hueco de cabecera; (7) preguntas a diseño, al final y numeradas.
 Lo que el Ojo argumenta de más se lo lee la Mano y no lo usa: el coste es doble.
 
@@ -90,7 +90,8 @@ effort salen de su fichero en `.claude/agents/`). El agente debe:
      SCSS custom (kebab-case, BEM `__element`).
   5. **Estados**: hover/focus/active/disabled, vacío/error si aplica.
   6. **Responsive**: comportamiento por breakpoint (`@include media-breakpoint-up(md)`).
-  7. **Hooks Django** propuestos: `{{ var }} → .clase` (comentario de cabecera del `.html`).
+  7. **Hooks** propuestos, en la sintaxis del perfil de hand-off (`config.repo.handoff`): `<hook> → .clase`
+     (comentario de cabecera del `.html`). Con `html` no hay hooks.
   8. **A11y**: roles, `aria-*`, foco, `visually-hidden`.
 
 > El Ojo **no escribe código de producción**: produce la spec y la captura de referencia.
@@ -102,7 +103,7 @@ Debe construir el componente siguiendo la **anatomía exacta del repo**:
 
 ```
 src/components/<name>/
-├── <name>.html          # REQUERIDO. Bootstrap 4.1.3. Cabecera con mapeo Django.
+├── <name>.html          # REQUERIDO. Bootstrap 4.1.3. Cabecera con mapeo de hooks.
 ├── <name>.scss          # OPCIONAL. Solo lo que Bootstrap no puede. Cabecera "// COMPONENT · <name> — …"
 ├── <name>.js            # OPCIONAL. Solo si interactivo más allá de la data-api de Bootstrap.
 ├── <name>.stories.js    # Story Storybook.
@@ -111,12 +112,13 @@ src/components/<name>/
 
 Reglas de maquetación (de `CLAUDE.md` + briefing del repo):
 - **Bootstrap-first**: clases/grid/utilidades; CSS custom como último recurso.
-- Cabecera de `.html` con el mapeo (forma completa cuando se conocen las vars):
+- Cabecera de `.html` con el mapeo (forma completa cuando se conocen las vars), cada hook en la
+  sintaxis del perfil de hand-off — se escriben con `var` / `bucle` / `si` de `src/stories/lib/hooks.js`:
   ```html
   <!--
     Component: <name> (Bootstrap 4.1.3)
-    {{ item.name }}  → .clase
-    {{ item.price }} → .<name>__amount
+    <hook de item.name>  → .clase
+    <hook de item.price> → .<name>__amount
   -->
   ```
 - Registrar el SCSS con `@import '../../components/<name>/<name>';` en
@@ -127,7 +129,7 @@ Reglas de maquetación (de `CLAUDE.md` + briefing del repo):
   en español; `tags: ['WIP']` por defecto, a `['production']` solo cuando la tarea esté entregada.
   **La etiqueta es obligatoria**: sin ella la build de entrega falla, y es lo único que decide qué
   se publica. Para componentes
-  con datos, patrón `render(args)` con `argTypes`/`args` y `docs.source.code` = el HTML Django `?raw`.
+  con datos, patrón `render(args)` con `argTypes`/`args` y `docs.source.code` = el HTML `?raw` con sus hooks, resuelto con `pinta()` de `hooks.js`.
   **No** stories con datos placeholder para piezas que no existen.
 - Taxonomía: los niveles de `config.storybook.titleLevels`, en ese orden. La regla: **¿esto se pega tal cual en un Snippet del CMS?**
   Sí → `Snippets/…`. No → `Design System/…` (color, tipografía, botones, iconos: información).

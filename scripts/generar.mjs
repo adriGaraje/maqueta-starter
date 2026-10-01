@@ -14,11 +14,13 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PERFILES } from '../template/src/stories/lib/hooks-perfiles.js'
+import { bloquesPerfil, htmlTemplate, marcadoresHooks } from './lib/plantilla-template.mjs'
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PLANTILLA = join(RAIZ, 'template')
 const HOY = new Date().toISOString().slice(0, 10)
-const GRUPOS = ['figma', 'jira', 'entrega', 'django', 'auth']
+const GRUPOS = ['figma', 'jira', 'entrega', 'hooks', 'auth']
 const PASOS = ['proyecto', 'figma', 'atlassian', 'github', 'equipo', 'auth', 'grupos']
 
 // Qué ficheros y scripts de package.json son de cada grupo. Lo que no está aquí es base.
@@ -35,7 +37,7 @@ const FICHEROS = {
     /^\.firebaserc$/,
     /^public\/entrega\//,
   ],
-  django: [/^scripts\/hooks-check\.mjs$/],
+  hooks: [/^scripts\/hooks-check\.mjs$/],
   auth: [/^auth\//],
 }
 const SCRIPTS = {
@@ -50,7 +52,7 @@ const SCRIPTS = {
     'deploy:pre',
     'check:entrega',
   ],
-  django: ['check:hooks'],
+  hooks: ['check:hooks'],
   auth: [],
 }
 
@@ -104,6 +106,26 @@ if (destino === RAIZ || destino.startsWith(RAIZ + '/template'))
   aborta('El destino no puede ser el starter ni su plantilla.', destino)
 if (existsSync(destino) && readdirSync(destino).length)
   aborta(`El destino ya existe y no está vacío: ${destino}. Elige otra carpeta o vacíala.`, destino)
+
+// Destino del HTML: el perfil de hand-off. Un JSON de antes trae `cms` en texto libre.
+const DE_CMS = [
+  [/laravel|blade/i, 'blade'],
+  [/symfony|drupal|craft|twig/i, 'twig'],
+  [/shopify|jekyll|liquid/i, 'liquid'],
+  [/eleventy|11ty|nunjucks/i, 'nunjucks'],
+  [/ghost|handlebars|mustache/i, 'handlebars'],
+  [/wordpress|php/i, 'php'],
+  [/ningun|estátic|estatic|static|html/i, 'html'],
+]
+const perfil = (() => {
+  const x = v(P.handoff)?.toLowerCase()
+  if (x && PERFILES[x]) return x
+  if (x) aviso(`Perfil de hand-off desconocido («${x}»): se usa django.`)
+  const cms = v(P.cms)
+  return (cms && DE_CMS.find(([re]) => re.test(cms))?.[1]) || 'django'
+})()
+const PERFIL = PERFILES[perfil]
+ok(`Destino del HTML: ${PERFIL.label} (${perfil})`)
 
 const F = de('figma')
 const A = de('atlassian')
@@ -174,9 +196,15 @@ const sitioEntrega = v(AU.sitioEntrega) ?? `storybook-${slug}`
 const sitioPre = v(AU.sitioPre) ?? `storybook-${slug}-pre`
 
 // Grupos: lo pedido, con coherencia. Sin Firebase no hay puerta ni entrega.
+// `django` es el nombre de antes del grupo `hooks`. Sin hooks (perfil html), el grupo no va por defecto.
+const porDefecto = GRUPOS.filter((g) => g !== 'hooks' || !PERFIL.sinHooks)
 let grupos = saltados.includes('grupos')
-  ? [...GRUPOS]
-  : (R.grupos ?? GRUPOS).filter((g) => GRUPOS.includes(g))
+  ? porDefecto
+  : [...new Set((R.grupos ?? porDefecto).map((g) => (g === 'django' ? 'hooks' : g)))].filter((g) =>
+      GRUPOS.includes(g)
+    )
+if (PERFIL.sinHooks && grupos.includes('hooks'))
+  aviso('Grupo «hooks» con el perfil html: viaja, pero check:hooks se salta (no hay hooks).')
 if (!proyectoHosting && grupos.includes('entrega'))
   aviso('Grupo «entrega» sin proyecto de Firebase: viaja, pero `.firebaserc` queda en TODO.')
 if (grupos.includes('auth') && (saltados.includes('auth') || AU.activar === false)) {
@@ -193,8 +221,10 @@ const comprobar = R.comprobar !== false
 const MAYUS = slug.toUpperCase().replace(/-/g, '_')
 const PASCAL = slug.replace(/(^|-)([a-z0-9])/g, (_, __, c) => c.toUpperCase())
 // `STARTERSLUG_` es prefijo de entorno; `STARTERSLUG` suelto es la clave de Jira.
+const MARCAS = marcadoresHooks(perfil)
 const sustituir = (t) =>
-  t
+  Object.entries(MARCAS)
+    .reduce((acc, [k, x]) => acc.replaceAll(k, () => x), bloquesPerfil(t, perfil))
     .replace(/STARTERSLUG_/g, `${MAYUS}_`)
     .replace(/STARTERSLUG/g, projectKey ?? MAYUS)
     .replace(/Starterslug/g, PASCAL)
@@ -235,6 +265,8 @@ try {
     writeFileSync(join(destino, dest), readFileSync(join(RAIZ, origen)))
     copiados++
   }
+  // El _template, escrito en la sintaxis del perfil (scripts/lib/plantilla-template.mjs).
+  writeFileSync(join(destino, 'src/components/_template/_template.html'), htmlTemplate(perfil))
   ok(
     `Plantilla copiada: ${copiados} ficheros · grupos: base${grupos.map((g) => `, ${g}`).join('')}`
   )
@@ -308,7 +340,8 @@ paso(`docs/${slug}-harness/config.json`, () => {
   }
   pon(c.figma, 'org', v(F.org))
   pon(c.repo, 'remote', remoteFinal)
-  pon(c.repo, 'handoff', v(P.cms))
+  c.repo.handoff = perfil
+  c.repo.handoffLabel = PERFIL.label
   pon(c.project, 'liveSiteHost', v(P.webEnVivo))
   if (v(P.descripcion)) c.project.description = v(P.descripcion)
 

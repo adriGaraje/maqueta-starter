@@ -68,6 +68,11 @@ const ESTATICOS = {
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
   '/estilos.css': ['estilos.css', 'text/css; charset=utf-8'],
+  // La tabla de perfiles de hand-off es la del repo generado: una sola fuente.
+  '/perfiles.js': [
+    '../template/src/stories/lib/hooks-perfiles.js',
+    'text/javascript; charset=utf-8',
+  ],
 }
 
 // Trabajos en memoria: el asistente es de un solo usuario y vive lo que el proceso.

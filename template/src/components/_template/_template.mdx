@@ -1,0 +1,32 @@
+import { Meta, Title, Description, Canvas } from '@storybook/addon-docs/blocks'
+import * as Template from './_template.stories'
+import { CodeTabs, Variables } from '../../stories/code-tabs.jsx'
+import html from './_template.html?raw'
+
+<Meta of={Template} />
+
+<Title />
+
+<Description />
+
+{/* si:hooks */}
+Copia el HTML de abajo en el CMS. Los `STARTERHOOK_VAR`, `STARTERHOOK_IF` y `STARTERHOOK_FOR` son
+**hooks de STARTERHANDOFF**: no los toques ni los rellenes aquí — la tabla de variables dice qué
+espera cada uno.
+{/* /si:hooks */}
+{/* si:html */}
+Copia el HTML de abajo en el CMS. El destino es **STARTERHANDOFF**: no hay hooks, el texto va
+literal y se cambia en el CMS.
+{/* /si:html */}
+
+<Canvas of={Template.Default} />
+
+## Código
+
+<CodeTabs html={html} />
+
+{/* si:hooks */}
+## Variables
+
+<Variables html={html} />
+{/* /si:hooks */}

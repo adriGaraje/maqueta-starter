@@ -20,9 +20,11 @@ acme/
 │   ├── acme-harness/             # config.json (fuente única), lecciones, modules, state, onboarding
 │   └── architecture, styling, design-tokens, storybook-guide, git-workflow, jira-workflow
 ├── src/
-│   ├── components/_template/     # cópiala para la primera pieza (html + scss + story)
+│   ├── components/_template/     # cópiala para la primera pieza: html (en la sintaxis del perfil),
+│   │                             #   scss, datos-template.js, story y .mdx con la tabla de variables
 │   ├── styles/                   # ITCSS: settings · tools · Bootstrap · generic · elements · components · trumps
-│   ├── stories/                  # Welcome, Release Notes, code-tabs, snippet-code, lib/django
+│   ├── stories/                  # Welcome, Release Notes, code-tabs, snippet-code,
+│   │                             #   lib/hooks.js + hooks-perfiles.js (lib/django.js, alias)
 │   ├── pages/                    # estándar de página: cabecera y marcas de snippet
 │   └── scripts/                  # main.js (global / por pieza) + globals.js
 ├── scripts/                      # gates y sondas: storybook-check, paginas-check, play-errors,
@@ -41,7 +43,7 @@ acme/
 | `figma`   | figma-ready-scan, figma-tokens-diff, site-map-sync             | tokens:diff, figma:ready, sitemap:sync            |
 | `jira`    | jira-mirror, `tasks/`                                          | tasks:mirror                                      |
 | `entrega` | build-entrega, estado-entrega, entrega-check, deploy, Firebase | build:entrega, deploy, deploy:pre, check:entrega… |
-| `django`  | hooks-check                                                    | check:hooks                                       |
+| `hooks`   | hooks-check (se salta con el perfil `html`)                    | check:hooks                                       |
 | `auth`    | `auth/` (Storybook lo sirve como staticDir si existe)          | —                                                 |
 
 ## El deploy
@@ -53,7 +55,9 @@ con origin, y desde release crea el tag `entrega/AAAA-MM-DD` (el push es manual)
 
 ## Qué escribe el generador encima de la plantilla
 
-`config.json` (respuestas en sus claves; los ids de estado de Jira a `null` porque son de cada
+El `_template.html` en la sintaxis del perfil de hand-off (`scripts/lib/plantilla-template.mjs`),
+los bloques `si:hooks` / `si:html` y los marcadores `STARTERHOOK_*` de `CLAUDE.md` y del `.mdx`,
+`config.json` (respuestas en sus claves, `repo.handoff` y `repo.handoffLabel` incluidos; los ids de estado de Jira a `null` porque son de cada
 Jira), `.env`, `settings.json`, `.mcp.json`, `auth/*.js`, `.firebaserc`, el Figma de
 `jira-mirror`, el README, y `scripts/conexiones-check.mjs` + `scripts/lib/conexiones.mjs`
 (de `extras/` y `scripts/lib/` del starter). Después formatea con Prettier, `git init` y el commit

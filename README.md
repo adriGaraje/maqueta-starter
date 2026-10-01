@@ -32,18 +32,43 @@ Se abre `http://localhost:4747` (`-- --no-open` para no abrirlo, `-- --puerto 50
 
 ## Los pasos
 
-1. **Proyecto** — nombre (lo único obligatorio), slug, carpeta destino (`../<slug>` por defecto), descripción, CMS.
+1. **Proyecto** — nombre (lo único obligatorio), slug, carpeta destino (`../<slug>` por defecto), descripción y
+   **destino del HTML / hand-off** (ver abajo).
 2. **Figma** — fileKey o URL del handoff, nombre, `FIGMA_TOKEN` (a `.env`), viewports.
 3. **Jira / Atlassian** — site, cloudId, clave, nombre, boardId, Confluence, email + API token (a `.env`).
 4. **GitHub** — «Crear el repo» (por defecto): token (a `.env`), dónde (tu usuario u organización), nombre, privado y push del primer commit; o «Ya existe»: URL del remote.
    Después, ramas de integración y release, patrón de rama y MCP de GitHub (`.mcp.json`).
 5. **Tú** — alias, email de git (propuestos de esta máquina) y `accountId` de Jira («Buscarlo» lo pide a Jira). Más gente, luego en `config.team`.
 6. **Firebase y puerta** — proyecto y sitios de Hosting (`storybook-<slug>` y `-pre`), claves web y aspecto del login.
-7. **Qué llevar** — grupos `figma`, `jira`, `entrega`, `django`, `auth`, y la comprobación final.
+7. **Qué llevar** — el mismo desplegable de destino, los grupos `figma`, `jira`, `entrega`, `hooks`, `auth`, y la
+   comprobación final.
 8. **Resumen** — tabla, «Probar todo», Finalizar y progreso en vivo.
 
 Cada paso con credenciales tiene **«Probar conexión»**: la llamada la hace el servidor, nunca el
 navegador, y nada se escribe en disco hasta Finalizar. El borrador vive en `localStorage`.
+
+## Destino del HTML (perfil de hand-off)
+
+Dónde acaba el HTML entregado decide en qué sintaxis van los hooks del backend. Se elige en
+`proyecto.handoff` (en el JSON) y el generador lo lleva a todo lo que depende de ella: el helper
+`src/stories/lib/hooks.js` (escribe con `var`/`bucle`/`si`, resuelve con `pinta`), el `_template`
+(HTML, story y `.mdx` con su tabla de variables), `check:hooks`, `CLAUDE.md` y
+`config.repo.handoff` / `handoffLabel`.
+
+| Clave              | Variable    | Bucle                                                | Condicional                           | Para                          |
+| ------------------ | ----------- | ---------------------------------------------------- | ------------------------------------- | ----------------------------- |
+| `django` (defecto) | `{{ x }}`   | `{% for i in xs %}…{% endfor %}`                     | `{% if c %}…{% endif %}`              | Django, Flask/Jinja2, Pelican |
+| `twig`             | `{{ x }}`   | como django                                          | como django; filtros `\|default('…')` | Symfony, Drupal, Craft        |
+| `liquid`           | `{{ x }}`   | `{% for i in xs %}…{% endfor %}`                     | `{% if c %}…{% endif %}`              | Shopify, Jekyll               |
+| `nunjucks`         | `{{ x }}`   | como django                                          | como django                           | Eleventy                      |
+| `blade`            | `{{ $x }}`  | `@foreach ($xs as $i)…@endforeach`                   | `@if ($c)…@endif`                     | Laravel                       |
+| `handlebars`       | `{{x}}`     | `{{#each xs as \|i\|}}…{{/each}}`                    | `{{#if c}}…{{/if}}`                   | Mustache, Ghost               |
+| `php`              | `<?= $x ?>` | `<?php foreach ($xs as $i): ?>…<?php endforeach; ?>` | `<?php if ($c): ?>…<?php endif; ?>`   | WordPress a pelo              |
+| `html`             | —           | —                                                    | —                                     | HTML estático, sin plantillas |
+
+Con `html` el `_template` sale con el texto literal, `pinta` devuelve el HTML tal cual y el grupo
+`hooks` no va por defecto (si va, `check:hooks` se salta con un aviso). Un JSON antiguo con
+`proyecto.cms` en texto libre o el grupo `django` sigue valiendo: se traducen solos.
 
 ## Modo CLI
 
