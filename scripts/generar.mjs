@@ -109,9 +109,56 @@ const F = de('figma')
 const A = de('atlassian')
 const G = de('github')
 const AU = de('auth')
-const equipo = saltados.includes('equipo')
-  ? []
-  : (R.equipo ?? []).filter((p) => v(p.nombre) || v(p.email))
+// «Tú»: una persona. Un JSON antiguo con la lista de equipo vale: se toma la primera.
+const T = (() => {
+  if (saltados.includes('equipo')) return {}
+  const e = Array.isArray(R.equipo) ? R.equipo[0] : R.equipo
+  return e ?? {}
+})()
+
+// GitHub: «crear» hace el repo al final; «existe» (o un JSON sin modo) solo añade el remote.
+const ghToken = v(G.token)
+const crearRepo = G.modo === 'crear'
+const repoNombre = v(G.nombre) ?? slug
+let ghUsuario = v(G.usuario)
+let ghOwner = v(G.owner)
+const ghApi = (ruta, init = {}) =>
+  fetch(`https://api.github.com${ruta}`, {
+    ...init,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'maqueta-starter',
+      Authorization: `Bearer ${ghToken}`,
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+    },
+    signal: AbortSignal.timeout(20000),
+  }).then(async (r) => ({ status: r.status, cuerpo: await r.json().catch(() => null) }))
+let crear = crearRepo
+if (crearRepo && !ghToken) {
+  crear = false
+  aviso('GitHub en modo «crear» sin token: el repo no se crea. Créalo a mano y añade el remote.')
+} else if (crearRepo && !/^[A-Za-z0-9._-]+$/.test(repoNombre)) {
+  crear = false
+  aviso(
+    `«${repoNombre}» no vale como nombre de repo de GitHub (letras, números, . _ -): no se crea.`
+  )
+}
+if (crear && (!ghOwner || !ghUsuario)) {
+  try {
+    const yo = await ghApi('/user')
+    if (yo.status !== 200) throw new Error(`GET /user respondió ${yo.status}`)
+    ghUsuario ??= yo.cuerpo.login
+    ghOwner ??= yo.cuerpo.login
+  } catch (e) {
+    crear = false
+    aviso(`GitHub: no se pudo validar el token (${e.message}); el repo no se crea.`)
+  }
+}
+const remoteFinal = crearRepo
+  ? ghOwner
+    ? `https://github.com/${ghOwner}/${repoNombre}.git`
+    : null
+  : v(G.remote)
 
 // fileKey: vale una URL de Figma entera.
 const fileKey = (() => {
@@ -260,7 +307,7 @@ paso(`docs/${slug}-harness/config.json`, () => {
     c.figma.primaryFile = id
   }
   pon(c.figma, 'org', v(F.org))
-  pon(c.repo, 'remote', v(G.remote))
+  pon(c.repo, 'remote', remoteFinal)
   pon(c.repo, 'handoff', v(P.cms))
   pon(c.project, 'liveSiteHost', v(P.webEnVivo))
   if (v(P.descripcion)) c.project.description = v(P.descripcion)
@@ -289,15 +336,20 @@ paso(`docs/${slug}-harness/config.json`, () => {
   // Un proyecto nuevo no tiene sitio retirado.
   c.deploy.sitioRetirado = null
 
-  c.team = equipo.map((p, i) => ({
-    alias: v(p.alias) ?? v(p.nombre).toLowerCase().split(/\s+/)[0],
-    displayName: v(p.nombre) ?? v(p.alias),
-    email: v(p.email),
-    jiraAccountId: v(p.jiraAccountId),
-    githubUser: v(p.github),
-    activo: true,
-    isDefaultUser: i === 0,
-  }))
+  const alias = v(T.alias) ?? v(T.email)?.split('@')[0] ?? null
+  c.team = alias
+    ? [
+        {
+          alias,
+          displayName: v(T.nombre) ?? alias,
+          email: v(T.email),
+          jiraAccountId: v(T.jiraAccountId),
+          githubUser: v(T.github) ?? ghUsuario,
+          activo: true,
+          isDefaultUser: true,
+        },
+      ]
+    : []
 
   const vp = F.viewports ?? {}
   if (Number(vp.mobile)) c.viewports.mobile = Number(vp.mobile)
@@ -330,13 +382,13 @@ paso('.env (tokens: nunca en config.json)', () => {
 ATLASSIAN_EMAIL=""
 ATLASSIAN_API_TOKEN=""
 `
-  if (G.mcp) {
+  if (G.mcp || ghToken) {
     ejemplo += `
-# GitHub (MCP de .mcp.json). Claude Code NO lee este fichero: el token tiene que
-# estar exportado en el shell que lanza \`claude\` (export GITHUB_TOKEN=…).
+# GitHub (check:conexiones${G.mcp ? ' y el MCP de .mcp.json' : ''}). Claude Code NO lee este fichero:
+# el token tiene que estar exportado en el shell que lanza \`claude\` (export GITHUB_TOKEN=…).
 GITHUB_TOKEN=""
 `
-    env.GITHUB_TOKEN = v(G.token) ?? ''
+    env.GITHUB_TOKEN = ghToken ?? ''
   }
   escribe('.env.example', ejemplo)
   let t = ejemplo
@@ -417,7 +469,8 @@ paso('README.md', () => {
   if (v(P.descripcion)) t = t.replace(/^(# .*\n)/, `$1\n> ${v(P.descripcion)}\n`)
   t = t.replace(
     /(si tocas una story suspendida; `check:plays` para los `play` en rojo\.)/,
-    '$1\n`npm run check:conexiones` prueba Figma, Jira, GitHub y Firebase con `config.json` y `.env`.'
+    '$1\n`npm run check:conexiones` prueba Figma, Jira, GitHub y Firebase con `config.json` y `.env`.' +
+      `\nMás gente: añade filas en \`config.team\` de \`docs/${slug}-harness/config.json\`.`
   )
   for (const g of fuera) t = t.replace(new RegExp(`^- \`${g}\` — .*\\n`, 'm'), '')
   if (!grupos.length) t = t.replace(/\n## Grupos\n[\s\S]*$/, '\n')
@@ -446,6 +499,8 @@ if (existsSync(PRETTIER)) {
 // ── 4 · git ──────────────────────────────────────────────────────────────────
 
 const GIT = process.env.GIT || 'git'
+// Sin preguntas por terminal: el asistente no tiene a quién preguntar.
+process.env.GIT_TERMINAL_PROMPT = '0'
 // Autoría de los commits si esta máquina no tiene user.email: la primera persona del equipo.
 const quien = []
 function git(...args) {
@@ -457,14 +512,43 @@ paso('git init + primer commit «Arranque desde maqueta-starter»', () => {
   git('init', '-q', '-b', v(G.release) ?? 'main')
   const yo = spawnSync(GIT, ['config', 'user.email'], { cwd: destino, encoding: 'utf8' })
   if (yo.status !== 0 || !yo.stdout.trim()) {
-    const p = equipo[0]
-    quien.push('-c', `user.name=${v(p?.nombre) ?? 'maqueta-starter'}`)
-    quien.push('-c', `user.email=${v(p?.email) ?? 'maqueta-starter@localhost'}`)
+    quien.push('-c', `user.name=${v(T.nombre) ?? v(T.alias) ?? 'maqueta-starter'}`)
+    quien.push('-c', `user.email=${v(T.email) ?? 'maqueta-starter@localhost'}`)
   }
   git('add', '-A')
   git(...quien, 'commit', '-q', '--no-verify', '-m', 'Arranque desde maqueta-starter')
-  if (v(G.remote)) git('remote', 'add', 'origin', v(G.remote))
+  if (!crearRepo && v(G.remote)) git('remote', 'add', 'origin', v(G.remote))
 })
+
+// El repo de GitHub se crea después del local: si falla, el local ya está hecho.
+let creado = null
+if (crear) {
+  try {
+    const ruta =
+      ghOwner.toLowerCase() === ghUsuario.toLowerCase() ? '/user/repos' : `/orgs/${ghOwner}/repos`
+    const r = await ghApi(ruta, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: repoNombre,
+        private: G.privado !== false,
+        description: v(P.descripcion) ?? undefined,
+      }),
+    })
+    if (r.status !== 201) {
+      const motivo = r.cuerpo?.errors?.[0]?.message ?? r.cuerpo?.message ?? ''
+      throw new Error(`${r.status}${motivo ? `: ${motivo}` : ''}`)
+    }
+    creado = r.cuerpo
+    git('remote', 'add', 'origin', creado.clone_url)
+    ok(`Repo creado: ${creado.html_url}`)
+    if (creado.clone_url !== remoteFinal)
+      aviso(`config.repo.remote dice ${remoteFinal} y GitHub lo creó como ${creado.clone_url}.`)
+  } catch (e) {
+    aviso(
+      `GitHub: no se pudo crear ${ghOwner}/${repoNombre} (${e.message}). El repo local está hecho: créalo a mano y \`git remote add origin ${remoteFinal}\`.`
+    )
+  }
+}
 
 // ── 5 · comprobación ─────────────────────────────────────────────────────────
 
@@ -515,6 +599,26 @@ if (comprobar) {
       mal(`La puerta no viaja en la build: falta ${faltan.join(', ')}`)
       comprobado = false
     } else ok('La puerta viaja en la build (guard.js + login/)')
+  }
+}
+
+// ── 5b · primer push ─────────────────────────────────────────────────────────
+
+// Después de la comprobación, porque el lockfile enmienda el commit de arranque.
+// El token va solo en la URL de este push: el remote origin queda limpio y,
+// sin credential helper, el llavero tampoco se lo guarda.
+if (creado && G.subir !== false) {
+  const rama = git('branch', '--show-current')
+  const conToken = creado.clone_url.replace('https://', `https://x-access-token:${ghToken}@`)
+  try {
+    git('-c', 'credential.helper=', 'push', '-q', conToken, `${rama}:${rama}`)
+    git('update-ref', `refs/remotes/origin/${rama}`, 'HEAD')
+    git('branch', '-q', '--set-upstream-to', `origin/${rama}`)
+    ok('Primer commit subido')
+  } catch (e) {
+    aviso(
+      `No se pudo subir el primer commit: ${e.message.split(ghToken).join('***').split('\n')[0]}`
+    )
   }
 }
 

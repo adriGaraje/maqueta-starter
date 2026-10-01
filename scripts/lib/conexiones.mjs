@@ -92,8 +92,9 @@ export async function probarJira({ site, email, token, projectKey } = {}) {
   if (yo.status === 403) return mal(S, 'el token no tiene permiso en este site (403)')
   if (yo.status !== 200) return mal(S, `respuesta inesperada de ${host} (${yo.status})`)
   const quien = yo.cuerpo?.displayName ?? email
+  const cuenta = { accountId: yo.cuerpo?.accountId, displayName: yo.cuerpo?.displayName }
   if (!hay(projectKey))
-    return ok(S, `conectado como ${quien} · sin clave de proyecto que comprobar`)
+    return ok(S, `conectado como ${quien} · sin clave de proyecto que comprobar`, cuenta)
   const p = await pide(
     `https://${host}/rest/api/3/project/${encodeURIComponent(projectKey.trim())}`,
     auth
@@ -101,6 +102,7 @@ export async function probarJira({ site, email, token, projectKey } = {}) {
   if (p.red) return mal(S, p.red)
   if (p.status === 200)
     return ok(S, `${quien} · proyecto ${p.cuerpo?.key} «${p.cuerpo?.name}»`, {
+      ...cuenta,
       proyecto: p.cuerpo?.name,
     })
   if (p.status === 404)
@@ -119,14 +121,59 @@ export function repoDeRemote(remote) {
   return m ? { owner: m[1], repo: m[2] } : null
 }
 
-export async function probarGithub({ remote, token } = {}) {
+const cabGithub = (token) => ({
+  Accept: 'application/vnd.github+json',
+  'User-Agent': 'maqueta-starter',
+  ...(hay(token) ? { Authorization: `Bearer ${token.trim()}` } : {}),
+})
+
+// Modo «crear»: valida el token, lista dónde se puede crear (el usuario y sus
+// organizaciones) y avisa si el nombre ya está cogido en ese sitio.
+export async function probarGithubCrear({ token, owner, nombre } = {}) {
   const S = 'GitHub'
+  if (!hay(token)) return omite(S, 'sin token de GitHub: hace falta para crear el repo')
+  const cab = cabGithub(token)
+  const yo = await pide('https://api.github.com/user', cab)
+  if (yo.red) return mal(S, yo.red)
+  if (yo.status === 401)
+    return mal(S, 'el token de GitHub no es válido o ha caducado (401 Bad credentials)')
+  if (yo.status !== 200) return mal(S, `respuesta inesperada de GitHub (${yo.status})`)
+  const login = yo.cuerpo?.login
+  const usuario = login
+  const orgs = await pide('https://api.github.com/user/orgs?per_page=100', cab)
+  const cuentas = [
+    { login, tipo: 'usuario' },
+    ...(orgs.status === 200 && Array.isArray(orgs.cuerpo)
+      ? orgs.cuerpo.map((o) => ({ login: o.login, tipo: 'organización' }))
+      : []),
+  ]
+  const n = cuentas.length - 1
+  const base = `conectado como ${login} · ${n} organizaci${n === 1 ? 'ón' : 'ones'}${orgs.status === 200 ? '' : ' (el token no puede listarlas: falta read:org)'}`
+  const donde = hay(owner) ? owner.trim() : login
+  if (!hay(nombre)) return ok(S, `${base} · sin nombre de repo que comprobar`, { cuentas, usuario })
+  const r = await pide(`https://api.github.com/repos/${donde}/${nombre.trim()}`, cab)
+  if (r.status === 200)
+    return mal(
+      S,
+      `${base}, pero ya existe ${donde}/${nombre.trim()}: cambia el nombre o elige «Ya existe»`,
+      { cuentas, usuario }
+    )
+  if (r.status === 404)
+    return ok(S, `${base} · ${donde}/${nombre.trim()} está libre`, { cuentas, usuario })
+  return ok(S, `${base} · no se pudo comprobar ${donde}/${nombre.trim()} (${r.status})`, {
+    cuentas,
+    usuario,
+  })
+}
+
+export async function probarGithub({ modo, remote, token, owner, nombre } = {}) {
+  const S = 'GitHub'
+  if (modo === 'crear') return probarGithubCrear({ token, owner, nombre })
   if (!hay(remote)) return omite(S, 'sin URL del remote')
   const rr = repoDeRemote(remote)
   if (!rr)
     return mal(S, `«${remote}» no parece un remote de github.com (git@github.com:org/repo.git)`)
-  const cab = { Accept: 'application/vnd.github+json', 'User-Agent': 'maqueta-starter' }
-  if (hay(token)) cab.Authorization = `Bearer ${token.trim()}`
+  const cab = cabGithub(token)
   const r = await pide(`https://api.github.com/repos/${rr.owner}/${rr.repo}`, cab)
   if (r.red) return mal(S, r.red)
   if (r.status === 200) {
@@ -140,12 +187,14 @@ export async function probarGithub({ remote, token } = {}) {
             ? 'solo lectura'
             : 'sin permisos'
       : 'sin token: permisos desconocidos'
+    const yo = hay(token) ? await pide('https://api.github.com/user', cab) : null
     return ok(
       S,
       `${rr.owner}/${rr.repo} · rama por defecto ${r.cuerpo?.default_branch} · ${permisos}`,
       {
         ramaPorDefecto: r.cuerpo?.default_branch,
         permisos,
+        usuario: yo?.status === 200 ? yo.cuerpo?.login : undefined,
       }
     )
   }

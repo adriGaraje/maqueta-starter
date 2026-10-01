@@ -31,6 +31,11 @@ const inicial = () => ({
     confluenceSpaceName: '',
   },
   github: {
+    modo: 'crear',
+    owner: '',
+    nombre: '',
+    privado: true,
+    subir: true,
     remote: '',
     integracion: 'develop',
     release: 'main',
@@ -38,7 +43,8 @@ const inicial = () => ({
     mcp: false,
     token: '',
   },
-  equipo: [{ nombre: '', alias: '', email: '', jiraAccountId: '', github: '' }],
+  // «Tú»: quien arranca. `nombre` sale de git config user.name y `github` de la prueba de GitHub.
+  equipo: { alias: '', email: '', jiraAccountId: '', nombre: '', github: '' },
   auth: {
     activar: true,
     firebase: {
@@ -75,7 +81,12 @@ let defectoDestino = ''
 function cargar() {
   try {
     const b = JSON.parse(localStorage.getItem(CLAVE))
-    if (b && b.proyecto) return { ...inicial(), ...b }
+    // Un borrador de antes de los modos de GitHub no trae sus claves nuevas.
+    if (b && b.proyecto) {
+      const i = inicial()
+      const eq = Array.isArray(b.equipo) ? b.equipo[0] : b.equipo
+      return { ...i, ...b, github: { ...i.github, ...b.github }, equipo: { ...i.equipo, ...eq } }
+    }
   } catch {}
   return inicial()
 }
@@ -109,6 +120,7 @@ const aSlug = (s) =>
     .replace(/^-+|-+$/g, '')
     .replace(/^[0-9-]+/, '')
 const SLUG_OK = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
+const crearRepo = () => S.github.modo === 'crear'
 const hayFirebase = () =>
   !S.saltados.includes('auth') && Boolean(S.auth.proyectoHosting || S.auth.firebase.projectId)
 const hayClaves = () =>
@@ -221,28 +233,86 @@ const PASOS = [
     titulo: 'GitHub',
     prueba: 'github',
     intro:
-      'El remote se añade como origin; las ramas alimentan el flujo de git del harness y el deploy.',
+      'El repo de GitHub queda como origin; las ramas alimentan el flujo de git del harness y el deploy.',
+    alEntrar: () => {
+      if (!S.github.nombre && S.proyecto.slug) S.github.nombre = S.proyecto.slug
+    },
     campos: [
-      campo('github.remote', 'URL del remote', { placeholder: 'git@github.com:acme/acme-web.git' }),
+      campo('github.modo', '¿Tienes ya el repo en GitHub?', {
+        tipo: 'radio',
+        opciones: [
+          ['crear', 'Crear el repo'],
+          ['existe', 'Ya existe'],
+        ],
+      }),
+      campo('github.token', 'GITHUB_TOKEN', {
+        tipo: 'password',
+        si: crearRepo,
+        ayuda:
+          'Va a .env, nunca a config.json. Scope «repo» (y «read:org» para listar organizaciones). «Probar conexión» rellena «Dónde».',
+      }),
+      campo('github.owner', 'Dónde', {
+        tipo: 'select',
+        mitad: true,
+        si: crearRepo,
+        opcionesFn: () => S._cuentasGithub ?? [],
+        vacio: 'Prueba el token para elegir',
+      }),
+      campo('github.nombre', 'Nombre del repo', {
+        mitad: true,
+        si: crearRepo,
+        placeholderFn: () => S.proyecto.slug || 'acme-web',
+      }),
+      campo('github.privado', 'Privado', { tipo: 'checkbox', si: crearRepo }),
+      campo('github.subir', 'Subir el primer commit (push de la rama de release)', {
+        tipo: 'checkbox',
+        si: crearRepo,
+      }),
+      campo('github.remote', 'URL del remote', {
+        placeholder: 'git@github.com:acme/acme-web.git',
+        si: () => !crearRepo(),
+      }),
+      campo('github.token', 'GITHUB_TOKEN (opcional)', {
+        tipo: 'password',
+        si: () => !crearRepo(),
+        ayuda: 'Para probar un repo privado. Va a .env, nunca a config.json.',
+      }),
       campo('github.integracion', 'Rama de integración', { mitad: true }),
       campo('github.release', 'Rama de release', { mitad: true }),
       campo('github.patronRama', 'Patrón de rama', {
         ayuda: '<KEY> se sustituye por la clave de Jira.',
       }),
-      campo('github.mcp', 'Añadir el servidor MCP de GitHub (.mcp.json)', { tipo: 'checkbox' }),
-      campo('github.token', 'GITHUB_TOKEN', {
-        tipo: 'password',
-        siCampo: 'github.mcp',
-        ayuda: 'Va a .env. Claude Code lo lee del entorno: expórtalo en el shell que lanza claude.',
+      campo('github.mcp', 'Añadir el servidor MCP de GitHub (.mcp.json)', {
+        tipo: 'checkbox',
+        ayuda:
+          'Usa el mismo GITHUB_TOKEN. Claude Code lo lee del entorno: expórtalo en el shell que lanza claude.',
       }),
     ],
   },
   {
     id: 'equipo',
-    titulo: 'Equipo',
+    titulo: 'Tú',
     intro:
-      'La primera fila es el usuario por defecto. El hook de arranque te reconoce por tu git config user.email.',
-    pinta: pintaEquipo,
+      'Quien arranca el proyecto es el usuario por defecto del harness; el hook de arranque te reconoce por tu email de git. Más gente, después, en config.team.',
+    campos: [
+      campo('equipo.alias', 'Alias', {
+        mitad: true,
+        placeholder: 'ana',
+        ayuda: 'Propuesto de tu usuario del sistema.',
+      }),
+      campo('equipo.email', 'Email de git', {
+        mitad: true,
+        placeholder: 'ana@acme.com',
+        ayuda: 'Propuesto de git config user.email.',
+      }),
+      campo('equipo.jiraAccountId', 'accountId de Jira', {
+        placeholder: '712020:…',
+        ayuda: '«Buscarlo» lo pide a Jira con el email y el API token del paso de Jira.',
+      }),
+    ],
+    extra: () =>
+      `<div class="prueba"><button type="button" class="btn btn--sec" id="btn-buscar-cuenta">Buscarlo</button>
+      <div id="res-cuenta" aria-live="polite"></div></div>`,
   },
   {
     id: 'auth',
@@ -333,8 +403,10 @@ function pintaPasos() {
   }).join('')
 }
 
+const visible = (c) => (!c.siCampo || get(c.siCampo)) && (!c.si || c.si())
+
 function pintaCampo(c) {
-  if (c.siCampo && !get(c.siCampo)) return ''
+  if (!visible(c)) return ''
   if (c.seccion) return `<h3 class="seccion">${esc(c.seccion)}</h3>`
   const id = `f-${c.ruta}`
   const val = get(c.ruta)
@@ -343,6 +415,22 @@ function pintaCampo(c) {
     ? `<small id="${id}-ayuda" class="campo__ayuda">${esc(c.ayuda)}</small>`
     : ''
   const describe = c.ayuda ? ` aria-describedby="${id}-ayuda"` : ''
+  if (c.tipo === 'radio')
+    return `<fieldset class="campo campo--radio"><legend>${esc(c.label)}</legend>${c.opciones
+      .map(
+        ([x, l]) =>
+          `<label><input type="radio" name="${id}" data-ruta="${c.ruta}" value="${esc(x)}" ${val === x ? 'checked' : ''}> ${esc(l)}</label>`
+      )
+      .join('')}</fieldset>`
+  if (c.tipo === 'select') {
+    const ops = c.opcionesFn()
+    const lista = ops.some((o) => o.login === val) || !val ? ops : [{ login: val }, ...ops]
+    return `<div class="campo${ancho}"><label for="${id}">${esc(c.label)}</label>
+      <select id="${id}" data-ruta="${c.ruta}"${describe}>
+        ${lista.length ? '' : `<option value="">${esc(c.vacio)}</option>`}
+        ${lista.map((o) => `<option value="${esc(o.login)}" ${o.login === val ? 'selected' : ''}>${esc(o.login)}${o.tipo ? ` (${esc(o.tipo)})` : ''}</option>`).join('')}
+      </select>${ayuda}</div>`
+  }
   if (c.tipo === 'checkbox')
     return `<div class="campo campo--check"><label><input type="checkbox" id="${id}" data-ruta="${c.ruta}" ${val ? 'checked' : ''}${describe}> ${esc(c.label)}</label>${ayuda}</div>`
   const ph = c.placeholderFn ? c.placeholderFn() : c.placeholder
@@ -363,6 +451,7 @@ function pinta() {
   p.alEntrar?.()
   $('#campos').innerHTML =
     (p.pinta ? p.pinta() : `<div class="rejilla">${p.campos.map(pintaCampo).join('')}</div>`) +
+    (p.extra ? p.extra() : '') +
     (p.prueba ? pintaPrueba(p.prueba) : '')
   $('#btn-atras').disabled = S._paso === 0
   $('#btn-saltar').hidden = p.obligatorio || p.final
@@ -384,7 +473,10 @@ function datosPrueba(servicio) {
       token: S.atlassian.token,
       projectKey: S.atlassian.projectKey,
     }
-  if (servicio === 'github') return { remote: S.github.remote, token: S.github.token }
+  if (servicio === 'github') {
+    const { modo, remote, token, owner, nombre } = S.github
+    return { modo, remote, token, owner, nombre: nombre || S.proyecto.slug }
+  }
   return {
     proyecto: S.auth.proyectoHosting || S.auth.firebase.projectId,
     sitios: [S.auth.sitioEntrega, S.auth.sitioPre],
@@ -425,6 +517,14 @@ async function probar(servicio) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(datosPrueba(servicio)),
     })
+    const { cuentas, usuario } = pruebas[servicio]
+    if (servicio === 'github' && usuario) set('equipo.github', usuario)
+    if (servicio === 'github' && cuentas?.length) {
+      S._cuentasGithub = cuentas
+      if (!S.github.owner) S.github.owner = cuentas[0].login
+      guardar()
+      if (PASOS[S._paso].id === 'github') return pinta()
+    }
   } catch (e) {
     pruebas[servicio] = {
       estado: 'error',
@@ -462,32 +562,6 @@ document.addEventListener('click', (e) => {
       .forEach(probar)
 })
 
-function pintaEquipo() {
-  const filas = S.equipo
-    .map(
-      (m, i) => `<fieldset class="miembro">
-      <legend>${i === 0 ? 'Persona 1 · usuario por defecto' : `Persona ${i + 1}`}</legend>
-      <div class="rejilla">
-        ${[
-          ['nombre', 'Nombre', 'Ana Pérez'],
-          ['alias', 'Alias', 'ana'],
-          ['email', 'Email (git)', 'ana@acme.com'],
-          ['jiraAccountId', 'accountId de Jira', '712020:…'],
-          ['github', 'Usuario de GitHub', 'ana-gh'],
-        ]
-          .map(
-            ([k, l, ph]) => `<div class="campo campo--mitad"><label for="eq-${i}-${k}">${l}</label>
-          <input id="eq-${i}-${k}" data-equipo="${i}" data-clave="${k}" value="${esc(m[k])}" placeholder="${ph}" spellcheck="false"></div>`
-          )
-          .join('')}
-      </div>
-      <button type="button" class="enlace" data-quitar="${i}">Quitar a esta persona</button>
-    </fieldset>`
-    )
-    .join('')
-  return `${filas}<button type="button" class="btn btn--sec" id="btn-anadir">Añadir persona</button>`
-}
-
 function pintaGrupos() {
   if (/django/i.test(S.proyecto.cms) && !S.grupos.includes('django') && !S._djangoVisto) {
     S.grupos.push('django')
@@ -524,20 +598,17 @@ function filasResumen(paso) {
   const p = PASOS.find((x) => x.id === paso)
   if (S.saltados.includes(paso))
     return `<tr><th>${esc(p.titulo)}</th><td class="saltado" colspan="2">saltado → TODO</td></tr>`
-  if (paso === 'equipo') {
-    const gente = S.equipo.filter((m) => m.nombre || m.email)
-    return `<tr><th>Equipo</th><td colspan="2">${gente.length ? gente.map((m) => esc(`${m.nombre} <${m.email || '¿email?'}>`)).join('<br>') : '<span class="saltado">nadie → team: []</span>'}</td></tr>`
-  }
   if (paso === 'grupos')
     return `<tr><th>Grupos</th><td colspan="2">base${S.grupos.map((g) => `, ${g}`).join('')}${S.comprobar ? ' · con comprobación' : ''}</td></tr>`
-  return p.campos
-    .filter((c) => c.ruta && (!c.siCampo || get(c.siCampo)))
+  const filas = p.campos.filter((c) => c.ruta && visible(c))
+  return filas
     .map((c, i) => {
       let v = get(c.ruta)
       if (c.tipo === 'password') v = v ? '••••••' : ''
       if (c.tipo === 'checkbox') v = v ? 'sí' : 'no'
+      if (c.tipo === 'radio') v = c.opciones.find(([x]) => x === v)?.[1] ?? v
       const vacio = v === '' || v == null
-      return `<tr>${i === 0 ? `<th rowspan="${p.campos.filter((x) => x.ruta && (!x.siCampo || get(x.siCampo))).length}">${esc(p.titulo)}</th>` : ''}
+      return `<tr>${i === 0 ? `<th rowspan="${filas.length}">${esc(p.titulo)}</th>` : ''}
         <td>${esc(c.label)}</td><td class="${vacio ? 'saltado' : ''}">${vacio ? 'TODO' : esc(v)}</td></tr>`
     })
     .join('')
@@ -640,17 +711,14 @@ $('#btn-borrar').addEventListener('click', () => {
   S = inicial()
   guardar()
   ir(0)
+  pideYo()
 })
 
 $('#campos').addEventListener('input', (e) => {
   const t = e.target
-  if (t.dataset.equipo) {
-    S.equipo[Number(t.dataset.equipo)][t.dataset.clave] = t.value
-    return guardar()
-  }
   if (!t.dataset.ruta) return
   const ruta = t.dataset.ruta
-  if (t.type === 'checkbox') return
+  if (t.type === 'checkbox' || t.type === 'radio' || t.tagName === 'SELECT') return
   set(ruta, t.type === 'number' ? Number(t.value) || '' : t.value)
   if (ruta === 'proyecto.nombre' && !S._slugTocado) {
     set('proyecto.slug', aSlug(t.value))
@@ -678,6 +746,12 @@ $('#campos').addEventListener('change', (e) => {
       : S.grupos.filter((g) => g !== t.dataset.grupo)
     return guardar()
   }
+  if (t.type === 'radio' && t.dataset.ruta) {
+    set(t.dataset.ruta, t.value)
+    pinta()
+    return document.querySelector(`[data-ruta="${t.dataset.ruta}"]:checked`)?.focus()
+  }
+  if (t.tagName === 'SELECT' && t.dataset.ruta) return set(t.dataset.ruta, t.value)
   if (t.type === 'checkbox' && t.dataset.ruta) {
     set(t.dataset.ruta, t.checked)
     pinta()
@@ -686,21 +760,49 @@ $('#campos').addEventListener('change', (e) => {
   if (t.dataset.ruta === 'proyecto.destino') comprobarDestino()
 })
 $('#campos').addEventListener('click', (e) => {
-  if (e.target.id === 'btn-anadir') {
-    S.equipo.push({ nombre: '', alias: '', email: '', jiraAccountId: '', github: '' })
-    guardar()
-    pinta()
-    document.getElementById(`eq-${S.equipo.length - 1}-nombre`)?.focus()
-  }
-  const q = e.target.dataset?.quitar
-  if (q != null) {
-    S.equipo.splice(Number(q), 1)
-    if (!S.equipo.length)
-      S.equipo.push({ nombre: '', alias: '', email: '', jiraAccountId: '', github: '' })
-    guardar()
-    pinta()
-  }
+  if (e.target.id === 'btn-buscar-cuenta') buscarCuenta()
 })
+
+async function buscarCuenta() {
+  const el = document.getElementById('res-cuenta')
+  const { site, email, token } = S.atlassian
+  if (S.saltados.includes('atlassian') || !site || !email || !token) {
+    el.innerHTML =
+      '<p class="prueba__res prueba__res--omitido">– Hace falta el site, el email y el API token del paso de Jira.</p>'
+    return
+  }
+  el.innerHTML = '<p class="prueba__res">… preguntando a Jira</p>'
+  let r
+  try {
+    r = await api('/api/probar/jira', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ site, email, token }),
+    })
+  } catch (err) {
+    r = { estado: 'error', mensaje: `sin respuesta del servidor del asistente (${err.message})` }
+  }
+  if (r.accountId) {
+    set('equipo.jiraAccountId', r.accountId)
+    if (!S.equipo.nombre && r.displayName) set('equipo.nombre', r.displayName)
+    document.getElementById('f-equipo.jiraAccountId').value = r.accountId
+    el.innerHTML = `<p class="prueba__res prueba__res--ok"><strong>✔ Jira</strong> · ${esc(r.displayName ?? '')} · ${esc(r.accountId)}</p>`
+  } else
+    el.innerHTML = `<p class="prueba__res prueba__res--error"><strong>✖ Jira</strong> · ${esc(r.mensaje)}</p>`
+}
+
+// Propuestas de esta máquina para el paso «Tú»: solo rellenan lo vacío.
+async function pideYo() {
+  try {
+    const yo = await api('/api/yo')
+    for (const k of ['alias', 'email', 'nombre'])
+      if (!S.equipo[k] && yo[k]) {
+        set(`equipo.${k}`, yo[k])
+        const i = document.getElementById(`f-equipo.${k}`)
+        if (i) i.value = yo[k]
+      }
+  } catch {}
+}
 
 // ── finalizar ────────────────────────────────────────────────────────────────
 
@@ -709,6 +811,7 @@ function respuestas() {
   for (const k of Object.keys(r)) if (k.startsWith('_')) delete r[k]
   if (!r.proyecto.destino) r.proyecto.destino = defectoDestino
   if (!r.auth.login.brand) r.auth.login.brand = r.proyecto.nombre
+  if (!r.github.nombre) r.github.nombre = r.proyecto.slug
   return r
 }
 
@@ -780,3 +883,4 @@ ${S.comprobar ? '' : 'npm install\n'}npm run storybook</pre>
 
 pinta()
 if (S.proyecto.slug && !S.proyecto.destino) pideDefecto()
+pideYo()

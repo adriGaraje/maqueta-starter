@@ -4,6 +4,7 @@
 //
 //  GET  /                          el asistente (index.html, app.js, estilos.css)
 //  GET  /api/defecto               la carpeta por defecto para un slug (../<slug>)
+//  GET  /api/yo                    { alias, email, nombre } de esta máquina (usuario y git config)
 //  GET  /api/comprobar-destino     ?ruta= → { existe, vacia, absoluta }
 //  POST /api/generar               JSON de respuestas → { id }; lanza scripts/generar.mjs
 //  GET  /api/progreso/:id          { estado: en-curso|ok|error, lineas, resultado }
@@ -15,7 +16,7 @@
 //
 //  Uso: npm run starter [-- --no-open] [--puerto 4747]
 // =============================================================================
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
   existsSync,
@@ -27,7 +28,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { createServer } from 'node:http'
-import { tmpdir } from 'node:os'
+import { tmpdir, userInfo } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -90,6 +91,19 @@ function cuerpo(req) {
     req.on('end', () => ok(d))
     req.on('error', mal)
   })
+}
+
+// Lo que esta máquina ya sabe de quien la usa: propuestas para el paso «Tú».
+function yo() {
+  const gitConfig = (k) =>
+    spawnSync(process.env.GIT || 'git', ['config', '--get', k], {
+      encoding: 'utf8',
+    }).stdout?.trim() || ''
+  let alias = ''
+  try {
+    alias = userInfo().username
+  } catch {}
+  return { alias, email: gitConfig('user.email'), nombre: gitConfig('user.name') }
 }
 
 function comprobarDestino(ruta) {
@@ -165,6 +179,7 @@ const servidor = createServer(async (req, res) => {
         // El proyecto se crea donde el usuario lanzó el starter, nunca dentro del starter.
         destino: resolve(process.cwd(), url.searchParams.get('slug') || ''),
       })
+    if (req.method === 'GET' && url.pathname === '/api/yo') return json(res, 200, yo())
     if (req.method === 'GET' && url.pathname === '/api/comprobar-destino') {
       const ruta = url.searchParams.get('ruta')
       if (!ruta) return json(res, 400, { error: 'Falta ?ruta=' })

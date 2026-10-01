@@ -29,22 +29,25 @@
     "confluenceSpaceName": ""
   },
   "github": {
-    "remote": "git@github.com:acme/acme-web.git",
+    "modo": "crear",
+    "owner": "acme",
+    "nombre": "acme",
+    "privado": true,
+    "subir": true,
+    "remote": "",
     "integracion": "develop",
     "release": "main",
     "patronRama": "<type>/<KEY>-###-<slug>",
     "mcp": true,
-    "token": "ghp_ejemplo"
+    "token": "TODO"
   },
-  "equipo": [
-    {
-      "nombre": "Ana Pérez",
-      "alias": "ana",
-      "email": "ana@acme.example",
-      "jiraAccountId": "",
-      "github": "ana-acme"
-    }
-  ],
+  "equipo": {
+    "alias": "ana",
+    "email": "ana@acme.example",
+    "jiraAccountId": "",
+    "nombre": "Ana Pérez",
+    "github": "ana-acme"
+  },
   "auth": {
     "activar": true,
     "firebase": {

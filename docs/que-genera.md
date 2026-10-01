@@ -58,3 +58,9 @@ Jira), `.env`, `settings.json`, `.mcp.json`, `auth/*.js`, `.firebaserc`, el Figm
 `jira-mirror`, el README, y `scripts/conexiones-check.mjs` + `scripts/lib/conexiones.mjs`
 (de `extras/` y `scripts/lib/` del starter). Después formatea con Prettier, `git init` y el commit
 «Arranque desde maqueta-starter» (con el `package-lock.json` si hubo `npm install`).
+
+`config.repo.remote` lleva la URL final del repo. En modo «crear», el generador crea el repo en
+GitHub (`POST /user/repos` u `/orgs/<org>/repos`), lo añade como `origin` y, si se pidió, sube la
+rama de release; el token va solo en la URL de ese push, nunca en `.git/config`. Si la creación
+falla, el repo local queda hecho y el aviso dice cómo terminarlo. `config.team` lleva una persona,
+quien lo arranca; el README generado dice dónde añadir más.

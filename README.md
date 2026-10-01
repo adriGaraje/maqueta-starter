@@ -35,8 +35,9 @@ Se abre `http://localhost:4747` (`-- --no-open` para no abrirlo, `-- --puerto 50
 1. **Proyecto** — nombre (lo único obligatorio), slug, carpeta destino (`../<slug>` por defecto), descripción, CMS.
 2. **Figma** — fileKey o URL del handoff, nombre, `FIGMA_TOKEN` (a `.env`), viewports.
 3. **Jira / Atlassian** — site, cloudId, clave, nombre, boardId, Confluence, email + API token (a `.env`).
-4. **GitHub** — remote, ramas de integración y release, patrón de rama, MCP de GitHub (`.mcp.json`).
-5. **Equipo** — nombre · alias · email · accountId · usuario de GitHub. La primera fila es el usuario por defecto.
+4. **GitHub** — «Crear el repo» (por defecto): token (a `.env`), dónde (tu usuario u organización), nombre, privado y push del primer commit; o «Ya existe»: URL del remote.
+   Después, ramas de integración y release, patrón de rama y MCP de GitHub (`.mcp.json`).
+5. **Tú** — alias, email de git (propuestos de esta máquina) y `accountId` de Jira («Buscarlo» lo pide a Jira). Más gente, luego en `config.team`.
 6. **Firebase y puerta** — proyecto y sitios de Hosting (`storybook-<slug>` y `-pre`), claves web y aspecto del login.
 7. **Qué llevar** — grupos `figma`, `jira`, `entrega`, `django`, `auth`, y la comprobación final.
 8. **Resumen** — tabla, «Probar todo», Finalizar y progreso en vivo.
