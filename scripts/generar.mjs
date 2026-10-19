@@ -41,7 +41,9 @@ const FICHEROS = {
   ],
   jira: [/^scripts\/jira-mirror\.mjs$/, /^tasks\//],
   entrega: [
-    /^scripts\/(build-entrega|entrega-check|estado-entrega|deploy)\.mjs$/,
+    // `estado-entrega` NO es del grupo: alimenta Release Notes y la barra lateral, que
+    // son de la base. Sin él, Release Notes salía vacía en los proyectos sin entrega.
+    /^scripts\/(build-entrega|entrega-check|deploy)\.mjs$/,
     /^firebase\.json$/,
     /^\.firebaserc$/,
     /^public\/entrega\//,
@@ -52,15 +54,9 @@ const FICHEROS = {
 const SCRIPTS = {
   figma: ['tokens:diff', 'figma:ready', 'sitemap:sync'],
   jira: ['tasks:mirror'],
-  entrega: [
-    'build:entrega',
-    'estado:entrega',
-    'prestorybook',
-    'prebuild-storybook',
-    'deploy',
-    'deploy:pre',
-    'check:entrega',
-  ],
+  // `estado:entrega` y los `pre*` de Storybook se quedan siempre: sin el grupo, los
+  // `pre*` solo calculan el estado (ver el paso de package.json).
+  entrega: ['build:entrega', 'deploy', 'deploy:pre', 'check:entrega'],
   hooks: ['check:hooks'],
   auth: [],
 }
@@ -317,6 +313,10 @@ function paso(nombrePaso, fn) {
 paso('package.json con los scripts de los grupos elegidos', () => {
   const o = leeJson('package.json')
   for (const g of fuera) for (const k of SCRIPTS[g]) delete o.scripts[k]
+  // Sin «entrega» no hay build-entrega, pero Release Notes y la barra lateral siguen
+  // necesitando el estado: antes de Storybook se calcula solo eso.
+  if (fuera.includes('entrega'))
+    for (const k of ['prestorybook', 'prebuild-storybook']) o.scripts[k] = 'npm run estado:entrega'
   o.scripts['check:conexiones'] = 'node scripts/conexiones-check.mjs'
   if (v(P.descripcion)) o.description = `${nombre} — ${v(P.descripcion)}`
   escribeJson('package.json', o)

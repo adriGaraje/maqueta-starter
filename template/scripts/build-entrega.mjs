@@ -2,7 +2,7 @@
 //
 //   public/entrega/starterslug-global.css        ← la capa global + los átomos del Design System
 //   public/entrega/starterslug-global.js         ← Bootstrap + los scripts de cualquier página
-//   public/entrega/fonts/*.woff2        ← On Air, que starterslug-global.css pide como `fonts/…`
+//   public/entrega/fonts/*.woff2        ← las fuentes del proyecto, que starterslug-global.css pide como `fonts/…`
 //   public/entrega/snippets/<x>.css     ← el CSS de cada snippet, ya resuelto y SIN minificar
 //   public/entrega/snippets/<x>.js      ← el JS de los snippets que lo tienen
 //
@@ -424,7 +424,7 @@ const scripts = await jsSnippets()
 console.log(`entrega · starterslug-global.css   ${kb(pesoCss)}`)
 console.log(`entrega · starterslug-global.js    ${kb(pesoJs)}`)
 console.log(
-  `entrega · fonts/*.woff2   ${tipos.n} ficheros, ${kb(tipos.peso)} — On Air 300/400/700/900`
+  `entrega · fonts/*.woff2   ${tipos.n} ficheros, ${kb(tipos.peso)}`
 )
 console.log(
   `entrega · snippets/*.css  ${snippets.length} ficheros, ${kb(snippets.reduce((t, s) => t + s.peso, 0))}`

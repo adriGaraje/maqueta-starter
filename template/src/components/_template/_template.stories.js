@@ -13,7 +13,8 @@ const render = ({ title = DATOS.item.title, text = DATOS.item.text, tag = DATOS.
 
 export default {
   title: 'Basics/Template',
-  tags: ['WIP'],
+  // Plantilla para copiar, no una pieza: fuera de Storybook (local y entrega).
+  tags: ['suspended'],
   render,
   args: { title: DATOS.item.title, text: DATOS.item.text, tag: DATOS.item.tag },
   argTypes: {
