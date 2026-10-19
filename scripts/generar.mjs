@@ -11,7 +11,16 @@
 //  asistente lee esa última línea; no imprimas nada detrás.
 // =============================================================================
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PERFILES } from '../template/src/stories/lib/hooks-perfiles.js'
@@ -251,9 +260,17 @@ try {
     const rel = relative(PLANTILLA, abs)
     if (deGrupoFuera(rel)) continue
     const buf = readFileSync(abs)
-    const destRel = sustituir(rel)
+    // npm no empaqueta ningún `.gitignore`: la plantilla lo lleva como `gitignore` y
+    // aquí recupera el punto. Sin él, el primer commit se llevaba el `.env` con los tokens.
+    const destRel = sustituir(rel === 'gitignore' ? '.gitignore' : rel)
     mkdirSync(dirname(join(destino, destRel)), { recursive: true })
     writeFileSync(join(destino, destRel), esTexto(buf) ? sustituir(buf.toString('utf8')) : buf)
+    // writeFileSync crea con 644: el modo se copia aparte. Los hooks, ejecutables
+    // siempre, por si el tarball de npm no trajo el bit: sin él git los ignora.
+    chmodSync(
+      join(destino, destRel),
+      rel.startsWith('.githooks/') ? 0o755 : statSync(abs).mode & 0o777
+    )
     copiados++
   }
   // Lo que pone el starter encima de la plantilla: la prueba de conexiones.
@@ -514,9 +531,17 @@ paso('README.md', () => {
 
 // El slug cambia el largo de las líneas, y Prettier las reparte de otra forma:
 // sin esto, el `format:check` del repo nuevo sale rojo de fábrica. Se usa el
-// Prettier del starter con la config del destino.
-const PRETTIER = join(RAIZ, 'node_modules/prettier/bin/prettier.cjs')
-if (existsSync(PRETTIER)) {
+// Prettier del starter con la config del destino. Se resuelve como dependencia y
+// no por ruta: con npx, Prettier queda AL LADO del starter (node_modules hoisted),
+// no dentro, y una ruta fija a `RAIZ/node_modules` se saltaba el formateo.
+const PRETTIER = (() => {
+  try {
+    return createRequire(import.meta.url).resolve('prettier/bin/prettier.cjs')
+  } catch {
+    return null
+  }
+})()
+if (PRETTIER) {
   const glob = leeJson('package.json').scripts.format?.match(/"([^"]+)"/)?.[1]
   const r = glob
     ? spawnSync(process.execPath, [PRETTIER, '--write', '--log-level', 'warn', glob], {
@@ -549,6 +574,10 @@ paso('git init + primer commit «Arranque desde maqueta-starter»', () => {
     quien.push('-c', `user.email=${v(T.email) ?? 'maqueta-starter@localhost'}`)
   }
   git('add', '-A')
+  // El `.env` lleva tokens reales y el primer commit se puede subir solo: si el
+  // `.gitignore` falla por lo que sea, se para aquí y no en el push protection de GitHub.
+  if (git('diff', '--cached', '--name-only', '--', '.env'))
+    throw new Error('el .env iba a entrar en el commit: revisa el .gitignore del destino')
   git(...quien, 'commit', '-q', '--no-verify', '-m', 'Arranque desde maqueta-starter')
   if (!crearRepo && v(G.remote)) git('remote', 'add', 'origin', v(G.remote))
 })
