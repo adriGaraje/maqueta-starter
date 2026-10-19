@@ -4,3 +4,6 @@ salida/
 .DS_Store
 *.log
 .idea/
+
+# Lo que antes ignoraba template/.gitignore (ahora template/gitignore, que git no lee)
+template/public/entrega/
